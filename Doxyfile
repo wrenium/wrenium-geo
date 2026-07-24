@@ -1,0 +1,22 @@
+# Doxygen config for wrenium-geo's API reference. Everything not listed here
+# uses Doxygen's own default -- run `doxygen -g -` to see the full set.
+# Generate with: doxygen Doxyfile (output: docs/api/html/index.html)
+
+PROJECT_NAME           = "wrenium-geo"
+PROJECT_NUMBER         = 0.1.0
+PROJECT_BRIEF          = "Header-only geometry library projecting geographic coastline and border data from an arbitrary center point"
+OUTPUT_DIRECTORY       = docs/api
+
+INPUT                  = include/wrenium/geo README.md
+EXCLUDE                = include/wrenium/geo/detail
+RECURSIVE              = YES
+USE_MDFILE_AS_MAINPAGE = README.md
+
+JAVADOC_AUTOBRIEF      = YES
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+WARN_NO_PARAMDOC       = YES
+SOURCE_BROWSER         = YES
+
+GENERATE_LATEX         = NO
+HAVE_DOT               = NO
