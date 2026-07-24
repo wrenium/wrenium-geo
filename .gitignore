@@ -1,0 +1,4 @@
+build/
+build_*/
+docs/api/
+doxygen_warnings.log
