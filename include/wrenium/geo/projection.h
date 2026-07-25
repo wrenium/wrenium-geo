@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_PROJECTION_H
-#define WRENIUM_GEO_PROJECTION_H
+#pragma once
 
 /// @file
 /// Fundamental constants used regardless of projection family: angle units
@@ -31,5 +30,3 @@ constexpr float kHalfPi = kPi * 0.5f;
 constexpr float kEarthRadiusKm = 6371.0f;
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_PROJECTION_H

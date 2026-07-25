@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DETAIL_AZIMUTHAL_EQUIDISTANT_H
-#define WRENIUM_GEO_DETAIL_AZIMUTHAL_EQUIDISTANT_H
+#pragma once
 
 #include <cmath>
 
@@ -46,5 +45,3 @@ inline Point project(const GeoPoint &rotatedPoint, float scale)
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_DETAIL_AZIMUTHAL_EQUIDISTANT_H

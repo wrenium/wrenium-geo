@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DETAIL_AZIMUTHAL_CLIP_H
-#define WRENIUM_GEO_DETAIL_AZIMUTHAL_CLIP_H
+#pragma once
 
 #include <cmath>
 #include <cstddef>
@@ -852,5 +851,3 @@ inline bool isCenterEnclosedByRings(const GeoPoint *rawPoints, const Buffer<std:
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_DETAIL_AZIMUTHAL_CLIP_H

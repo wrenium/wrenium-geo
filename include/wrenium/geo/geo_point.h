@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_GEO_POINT_H
-#define WRENIUM_GEO_GEO_POINT_H
+#pragma once
 
 #include "wrenium/geo/projection.h"
 
@@ -30,5 +29,3 @@ inline GeoPoint makeGeoPoint(float latDeg, float lonDeg)
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_GEO_POINT_H

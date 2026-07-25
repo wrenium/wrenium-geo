@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DETAIL_BIT_CAST_H
-#define WRENIUM_GEO_DETAIL_BIT_CAST_H
+#pragma once
 
 #include <cstdint>
 #include <cstring>
@@ -35,5 +34,3 @@ inline float bitsToFloat(std::uint32_t bits)
 
 } // namespace detail
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_DETAIL_BIT_CAST_H

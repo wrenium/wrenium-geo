@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_BUFFER_H
-#define WRENIUM_GEO_BUFFER_H
+#pragma once
 
 #include <array>
 #include <cstddef>
@@ -104,5 +103,3 @@ private:
 };
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_BUFFER_H

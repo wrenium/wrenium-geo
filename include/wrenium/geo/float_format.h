@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_FLOAT_FORMAT_H
-#define WRENIUM_GEO_FLOAT_FORMAT_H
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -120,5 +119,3 @@ inline Error appendFixedFloat(Buffer<char, Capacity> &out, float value)
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_FLOAT_FORMAT_H

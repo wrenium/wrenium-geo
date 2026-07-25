@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_PIPELINE_H
-#define WRENIUM_GEO_PIPELINE_H
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -427,5 +426,3 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_PIPELINE_H

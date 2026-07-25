@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_POINT_H
-#define WRENIUM_GEO_POINT_H
+#pragma once
 
 namespace wrenium::geo {
 
@@ -21,5 +20,3 @@ struct Point
 };
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_POINT_H

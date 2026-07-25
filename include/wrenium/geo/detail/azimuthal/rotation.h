@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DETAIL_AZIMUTHAL_ROTATION_H
-#define WRENIUM_GEO_DETAIL_AZIMUTHAL_ROTATION_H
+#pragma once
 
 #include <cmath>
 
@@ -111,5 +110,3 @@ inline GeoPoint rotate(const GeoPoint &point, const GeoPoint &center)
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_DETAIL_AZIMUTHAL_ROTATION_H

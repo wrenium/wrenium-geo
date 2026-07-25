@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DETAIL_BYTE_STREAM_H
-#define WRENIUM_GEO_DETAIL_BYTE_STREAM_H
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -58,5 +57,3 @@ inline float readFloatLE(const std::uint8_t *bytes)
 
 } // namespace detail
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_DETAIL_BYTE_STREAM_H

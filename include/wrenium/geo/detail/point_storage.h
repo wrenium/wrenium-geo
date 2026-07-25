@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DETAIL_POINT_STORAGE_H
-#define WRENIUM_GEO_DETAIL_POINT_STORAGE_H
+#pragma once
 
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/point.h"
@@ -43,5 +42,3 @@ union PointStorage
 };
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_DETAIL_POINT_STORAGE_H

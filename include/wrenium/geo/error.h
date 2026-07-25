@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_ERROR_H
-#define WRENIUM_GEO_ERROR_H
+#pragma once
 
 namespace wrenium::geo {
 
@@ -35,5 +34,3 @@ enum class Error
 };
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_ERROR_H

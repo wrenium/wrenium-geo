@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_SVG_EMITTER_H
-#define WRENIUM_GEO_SVG_EMITTER_H
+#pragma once
 
 #include <cstddef>
 
@@ -149,5 +148,3 @@ inline Error emitSvgLinePath(const Point *points, const std::size_t *runSizes, s
 }
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_SVG_EMITTER_H

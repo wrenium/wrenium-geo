@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_INPUT_FORMAT_H
-#define WRENIUM_GEO_INPUT_FORMAT_H
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -72,5 +71,3 @@ struct InputGeometry
 };
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_INPUT_FORMAT_H

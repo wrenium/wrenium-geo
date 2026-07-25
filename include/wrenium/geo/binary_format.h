@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_BINARY_FORMAT_H
-#define WRENIUM_GEO_BINARY_FORMAT_H
+#pragma once
 
 #include <cstdint>
 
@@ -53,5 +52,3 @@ struct PathCommands
 };
 
 } // namespace wrenium::geo
-
-#endif // WRENIUM_GEO_BINARY_FORMAT_H
