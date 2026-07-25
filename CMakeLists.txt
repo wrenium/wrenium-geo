@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.21)
 
 project(wrenium-geo
     VERSION 0.1.0
-    DESCRIPTION "Header-only geometry library projecting geographic coastlines from an arbitrary center point"
+    DESCRIPTION "Header-only geometry library projecting geographic coastline and border data from an arbitrary center point"
     LANGUAGES CXX
 )
 
