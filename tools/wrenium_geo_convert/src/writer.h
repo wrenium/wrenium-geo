@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_CONVERT_WRITER_H
-#define WRENIUM_GEO_CONVERT_WRITER_H
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -36,5 +35,3 @@ void writeBinaryFile(const std::string &path, const std::vector<std::uint8_t> &b
 void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes);
 
 } // namespace wrenium_geo_convert
-
-#endif // WRENIUM_GEO_CONVERT_WRITER_H

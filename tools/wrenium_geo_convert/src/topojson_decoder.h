@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_CONVERT_TOPOJSON_DECODER_H
-#define WRENIUM_GEO_CONVERT_TOPOJSON_DECODER_H
+#pragma once
 
 #include <utility>
 #include <vector>
@@ -80,5 +79,3 @@ using Line = Ring;
 std::vector<Line> decodeBorderMesh(const nlohmann::json &topology, const std::string &objectName);
 
 } // namespace wrenium_geo_convert
-
-#endif // WRENIUM_GEO_CONVERT_TOPOJSON_DECODER_H
