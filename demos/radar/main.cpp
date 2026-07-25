@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
-    engine.loadFromModule("wrenium_geo_radar_demo", "RadarMain");
+    engine.loadFromModule("wrenium_geo_radar_demo", "Main");
 
     return app.exec();
 }

@@ -9,7 +9,7 @@ qt_add_qml_module(radar
     URI wrenium_geo_radar_demo
     VERSION 1.0
     QML_FILES
-        RadarMain.qml
+        Main.qml
 )
 
 # Excluded from `all` -- build via the `demos` target or by name.
