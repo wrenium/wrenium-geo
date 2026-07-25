@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_QT_BRIDGE_WRENIUM_GEO_BRIDGE_H
-#define WRENIUM_GEO_QT_BRIDGE_WRENIUM_GEO_BRIDGE_H
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -101,5 +100,3 @@ private:
     wrenium::geo::Buffer<std::uint8_t, kMaxBorderBinaryBytes> m_borderBinaryPath;
     bool m_borderInputLoaded = false;
 };
-
-#endif // WRENIUM_GEO_QT_BRIDGE_WRENIUM_GEO_BRIDGE_H
