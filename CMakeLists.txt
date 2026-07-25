@@ -19,6 +19,16 @@ target_include_directories(wrenium-geo INTERFACE
 
 target_compile_features(wrenium-geo INTERFACE cxx_std_17)
 
+# Shared warning flags for this project's own targets (not extern/doctest or
+# FetchContent'd third-party code) -- link PRIVATE rather than duplicating
+# the MSVC/else block in every subdirectory's CMakeLists.txt.
+add_library(wrenium_geo_warnings INTERFACE)
+if(MSVC)
+    target_compile_options(wrenium_geo_warnings INTERFACE /W4)
+else()
+    target_compile_options(wrenium_geo_warnings INTERFACE -Wall -Wextra -Wpedantic)
+endif()
+
 if(PROJECT_IS_TOP_LEVEL)
     include(CTest)
 endif()

@@ -14,4 +14,4 @@ qt_add_qml_module(wrenium_geo_qt_bridge
 target_include_directories(wrenium_geo_qt_bridge PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/data)
 
 target_link_libraries(wrenium_geo_qt_bridge PUBLIC Qt6::Quick Wrenium::geo)
-target_link_libraries(wrenium_geo_qt_bridge PRIVATE wrenium_geo_binary_path_decoder_example)
+target_link_libraries(wrenium_geo_qt_bridge PRIVATE wrenium_geo_binary_path_decoder_example wrenium_geo_warnings)

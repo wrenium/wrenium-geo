@@ -22,7 +22,7 @@ set_target_properties(radar PROPERTIES
 )
 
 target_link_libraries(radar
-    PRIVATE Qt6::Quick Wrenium::geo wrenium_geo_qt_bridgeplugin
+    PRIVATE Qt6::Quick Wrenium::geo wrenium_geo_qt_bridgeplugin wrenium_geo_warnings
 )
 
 include(GNUInstallDirs)

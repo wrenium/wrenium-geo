@@ -14,15 +14,9 @@ add_executable(tests
     test_pipeline_benchmark.cpp
 )
 
-target_link_libraries(tests PRIVATE Wrenium::geo doctest::doctest)
+target_link_libraries(tests PRIVATE Wrenium::geo doctest::doctest wrenium_geo_warnings)
 target_include_directories(tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(tests PRIVATE cxx_std_17)
-
-if(MSVC)
-    target_compile_options(tests PRIVATE /W4)
-else()
-    target_compile_options(tests PRIVATE -Wall -Wextra -Wpedantic)
-endif()
 
 # Matches the MCU target: no exceptions/RTTI.
 target_compile_definitions(tests PRIVATE DOCTEST_CONFIG_NO_EXCEPTIONS_BUT_WITH_ALL_ASSERTS)

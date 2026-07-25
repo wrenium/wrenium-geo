@@ -18,10 +18,11 @@ add_library(topojson2bin_lib STATIC
 
 target_include_directories(topojson2bin_lib PUBLIC src)
 target_link_libraries(topojson2bin_lib PUBLIC Wrenium::geo nlohmann_json::nlohmann_json)
+target_link_libraries(topojson2bin_lib PRIVATE wrenium_geo_warnings)
 target_compile_features(topojson2bin_lib PUBLIC cxx_std_17)
 
 add_executable(topojson2bin src/main.cpp)
-target_link_libraries(topojson2bin PRIVATE topojson2bin_lib)
+target_link_libraries(topojson2bin PRIVATE topojson2bin_lib wrenium_geo_warnings)
 
 if(BUILD_TESTING)
     # Reuse extern/doctest if the parent build already vendored it.
@@ -36,7 +37,7 @@ if(BUILD_TESTING)
     endif()
 
     add_executable(topojson2bin_tests tests/test_topojson_decoder.cpp)
-    target_link_libraries(topojson2bin_tests PRIVATE topojson2bin_lib doctest::doctest)
+    target_link_libraries(topojson2bin_tests PRIVATE topojson2bin_lib doctest::doctest wrenium_geo_warnings)
 
     target_compile_definitions(topojson2bin_tests PRIVATE
         WRENIUM_GEO_CONVERT_TEST_DATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/data"

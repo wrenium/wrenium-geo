@@ -22,7 +22,7 @@ set_target_properties(azimuthmap PROPERTIES
 )
 
 target_link_libraries(azimuthmap
-    PRIVATE Qt6::Quick Qt6::QuickControls2 Wrenium::geo wrenium_geo_qt_bridgeplugin
+    PRIVATE Qt6::Quick Qt6::QuickControls2 Wrenium::geo wrenium_geo_qt_bridgeplugin wrenium_geo_warnings
 )
 
 include(GNUInstallDirs)
