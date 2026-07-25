@@ -15,7 +15,8 @@
 /// point buffer as a function-local stack variable risks overflowing a
 /// constrained target's stack.
 ///
-/// After a successful projectRings()/projectLines() call (pipeline.h),
+/// After a successful @ref wrenium::geo::projectRings() "projectRings" /
+/// @ref wrenium::geo::projectLines() "projectLines" call (pipeline.h),
 /// read the result back via `svgPath` (SVG text), projectedPoint() (one
 /// point by index), or projectedPoints() + projectedRingSizes() (the raw
 /// projected points, to feed a different emitter for example).
@@ -67,7 +68,7 @@ struct Workspace
     Buffer<char, OutputCharCapacity> svgPath;
 
     /// The final projected point at @p index, valid after a successful
-    /// projectRings()/projectLines() call. @p index ranges over the same
+    /// @ref projectRings() / @ref projectLines() call. @p index ranges over the same
     /// flattened point list projectedRingSizes() describes -- ring 0's
     /// points first, then ring 1's, and so on.
     Point projectedPoint(std::size_t index) const

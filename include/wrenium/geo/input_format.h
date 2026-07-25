@@ -52,7 +52,7 @@ struct InputGeometryHeader
 };
 
 /// A loaded, in-memory input dataset -- what loadInputGeometry() fills and
-/// projectRings()/projectLines() (pipeline.h) read from. Bundles the point
+/// @ref projectRings() / @ref projectLines() (pipeline.h) read from. Bundles the point
 /// list with its per-ring metadata into one value so they're always passed
 /// (and can't accidentally be mismatched) together.
 /// @tparam MaxPoints Capacity of #points.

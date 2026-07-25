@@ -31,7 +31,7 @@ namespace wrenium::geo {
 ///
 /// Also computes each ring's own [minLat, maxLat] into
 /// @p geometry's ringMinLat/ringMaxLat, one entry per ring --
-/// projectRings()/projectLines() need this exact bound for their whole-ring
+/// @ref projectRings() / @ref projectLines() need this exact bound for their whole-ring
 /// visibility pre-filter on *every* recompute, but the input geometry itself
 /// never changes between recomputes (only center/clipRadiusRad do), so it's
 /// computed once here rather than rescanned on every call.
@@ -290,10 +290,10 @@ inline Error projectRings(
     return Error::Ok;
 }
 
-/// Border-line counterpart to projectRings(): rotate -> clip -> project
+/// Border-line counterpart to @ref projectRings(): rotate -> clip -> project
 /// over the same kind of Workspace, but for *open* polyline data (country
 /// border segments, for example) rather than closed coastline rings.
-/// Deliberately a separate function, not a mode flag on projectRings() --
+/// Deliberately a separate function, not a mode flag on @ref projectRings() --
 /// border data has no inside/outside concept at all.
 /// Callers are expected to use a Workspace instance of their own,
 /// independent from the one used for coastline data.
@@ -391,7 +391,7 @@ struct ProjectedPoint
 /// Projects one arbitrary point (a station marker or waypoint, for
 /// example, or any other caller-supplied annotation not necessarily part
 /// of the coastline/border datasets) through the exact same rotate -> clip ->
-/// project math projectRings()/projectLines() use for the map's own
+/// project math @ref projectRings() / @ref projectLines() use for the map's own
 /// geometry, so a marker positioned at the returned point lines up
 /// exactly with the SVG/binary path output: (0, 0) at @p center, @p scale
 /// output units per km.

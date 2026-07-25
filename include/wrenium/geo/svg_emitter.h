@@ -86,7 +86,7 @@ inline Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std:
 }
 
 /// Border-line counterpart to emitSvgPath(): walks the *open* polyline run
-/// output of projectLines() (pipeline.h) and writes "M x,y L x,y ..."
+/// output of @ref projectLines() (pipeline.h) and writes "M x,y L x,y ..."
 /// per run -- deliberately never appending a "Z" close command, since a
 /// border segment has no fill and closing it would draw a spurious chord
 /// straight back to its own start. Render with fillColor: "transparent"

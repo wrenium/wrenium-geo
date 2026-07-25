@@ -8,8 +8,8 @@
 namespace wrenium::geo {
 
 /// A view's clip radius and output scale, as computed by makeViewport().
-/// Pass `clipRadiusRad`/`scale` directly to `projectRings`/`projectLines`/
-/// `projectPoint` (pipeline.h).
+/// Pass `clipRadiusRad`/`scale` directly to @ref projectRings() /
+/// @ref projectLines() / @ref projectPoint() (pipeline.h).
 struct Viewport
 {
     float clipRadiusRad; ///< Pass directly as clipRadiusRad.
