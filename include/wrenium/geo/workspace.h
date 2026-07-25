@@ -11,12 +11,9 @@
 #include "wrenium/geo/point.h"
 
 /// @file
-/// Reusable static workspace: a single object owning every buffer the
-/// pipeline needs, sized via compile-time template parameters. Meant to
-/// have static storage duration -- a `static` global or a long-lived,
-/// caller-owned object -- never allocated fresh per call, on heap or
-/// stack (a several-thousand-point buffer as a function-local stack
-/// variable risks overflowing a constrained target's stack).
+/// Never allocated fresh per call, on heap or stack -- a several-thousand-
+/// point buffer as a function-local stack variable risks overflowing a
+/// constrained target's stack.
 ///
 /// After a successful projectRings()/projectLines() call (pipeline.h),
 /// read the result back via `svgPath` (SVG text), projectedPoint() (one
@@ -25,6 +22,10 @@
 
 namespace wrenium::geo {
 
+/// A single object owning every buffer the rotate/clip/project pipeline
+/// needs, sized via compile-time template parameters. Meant to have static
+/// storage duration -- a `static` global or a long-lived, caller-owned
+/// object -- never allocated fresh per call.
 /// @tparam MaxPoints Capacity of each point-stage buffer.
 /// @tparam MaxRings Capacity of the ring-size lists (how many independent
 /// closed rings the geometry can have at once).

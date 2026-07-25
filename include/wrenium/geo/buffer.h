@@ -8,11 +8,10 @@
 
 #include "wrenium/geo/error.h"
 
-/// Fixed-capacity, std::array-backed container. Zero heap, static storage
-/// only; overflow is reported via Error::CapacityExceeded.
-
 namespace wrenium::geo {
 
+/// Fixed-capacity, std::array-backed container. Zero heap, static storage
+/// only; overflow is reported via Error::CapacityExceeded.
 /// @tparam T Element type.
 /// @tparam Capacity Maximum number of elements, fixed at compile time.
 template <typename T, std::size_t Capacity>

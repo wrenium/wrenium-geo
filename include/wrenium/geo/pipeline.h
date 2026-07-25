@@ -381,7 +381,7 @@ inline Error projectLines(
     return Error::Ok;
 }
 
-/// Result of projectPoint().
+/// A single projected point and whether it fell inside the clip circle.
 struct ProjectedPoint
 {
     Point point;  ///< Valid only when #visible is true.
