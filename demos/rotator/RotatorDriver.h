@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_DEMO_ROTATOR_DRIVER_H
-#define WRENIUM_GEO_DEMO_ROTATOR_DRIVER_H
+#pragma once
 
 #include <QObject>
 #include <QTimer>
@@ -91,5 +90,3 @@ private:
     int m_jogDirection = 0;
     QTimer m_timer;
 };
-
-#endif // WRENIUM_GEO_DEMO_ROTATOR_DRIVER_H
