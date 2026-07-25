@@ -23,7 +23,7 @@
 
 namespace BinaryPathDecoderExample {
 
-template <typename Commands = wrenium::geo::PathCommands>
+template <typename Commands = wrenium::geo::PathCommand>
 class BinaryPathDecoder
 {
 public:

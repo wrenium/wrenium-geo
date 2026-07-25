@@ -44,7 +44,7 @@ struct PathBinaryHeader
 /// Default command tag values -- compile-time configurable via the Commands
 /// template parameter on BinaryPathEmitter (and mirrored by any decoder
 /// written against this format).
-struct PathCommands
+struct PathCommand
 {
     static constexpr float MoveTo = 0.0f;    ///< Starts a new subpath at the point that follows.
     static constexpr float LineTo = 1.0f;    ///< Draws a straight segment to the point that follows.

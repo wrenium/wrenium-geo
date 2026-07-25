@@ -26,8 +26,8 @@
 namespace wrenium::geo {
 
 /// Encodes closed rings into the binary path stream (see binary_format.h).
-/// @tparam Commands Command-tag values to write; defaults to PathCommands.
-template <typename Commands = PathCommands>
+/// @tparam Commands Command-tag values to write; defaults to PathCommand.
+template <typename Commands = PathCommand>
 class BinaryPathEmitter
 {
 public:
@@ -115,8 +115,8 @@ private:
 /// magic/version header, same MoveTo/LineTo tag stream), but never writes a
 /// ClosePath tag after a run -- a border segment has no fill and closing it
 /// would draw a spurious chord back to its own start.
-/// @tparam Commands Command-tag values to write; defaults to PathCommands.
-template <typename Commands = PathCommands>
+/// @tparam Commands Command-tag values to write; defaults to PathCommand.
+template <typename Commands = PathCommand>
 class LineBinaryPathEmitter
 {
 public:
