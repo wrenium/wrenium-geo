@@ -465,13 +465,38 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
 
     using detail_clip::wrapPi;
 
-    // Is one arbitrary, fixed reference point on the clip boundary
-    // (bearing 0, due "north" of center at the clip radius) inside the
-    // ring? Raw-lat/lon ray-cast via detail_clip::unrotate to recover the
-    // reference point's raw position -- same technique as
+    // Reference point for seeding the entry/exit alternation below, plus
+    // which sorted interval (refK) it falls in. Deliberately *not* a fixed
+    // bearing (e.g. always due "north" of center) -- that reference point's
+    // raw position moves as clipRadiusRad changes, and for a real,
+    // geometrically complex coastline it will eventually sweep across an
+    // actual ring edge as the radius varies, flipping refInsideRing below
+    // and corrupting every downstream clipIsEntry value even though nothing
+    // about the ring's own crossings changed. Using the bearing at this
+    // ring's own widest crossing-gap instead keeps the reference point as
+    // far as possible from the coastline detail we already know is nearby.
+    std::size_t refK = 0;
+    float refBearing = 0.0f;
+    {
+        float bestGap = -1.0f;
+        for (std::size_t k = 0; k < N; ++k) {
+            const float a = bearing[clipOrder[k]];
+            const float b = bearing[clipOrder[(k + 1) % N]];
+            const float gap = (k + 1 < N) ? (b - a) : (b + 2.0f * kPi - a);
+            if (gap > bestGap) {
+                bestGap = gap;
+                refK = k;
+                refBearing = wrapPi(a + gap * 0.5f);
+            }
+        }
+    }
+
+    // Is the reference point (on the clip boundary, at refBearing) inside
+    // the ring? Raw-lat/lon ray-cast via detail_clip::unrotate to recover
+    // the reference point's raw position -- same technique as
     // isCenterEnclosedByRings below.
     const float threshold = kHalfPi - clipRadiusRad;
-    const GeoPoint refRotated{threshold, 0.0f};
+    const GeoPoint refRotated{threshold, refBearing};
     const GeoPoint refRaw = detail_clip::unrotate(refRotated, center);
 
     bool refInsideRing;
@@ -510,27 +535,6 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
             }
         }
         refInsideRing = inside;
-    }
-
-    // Find which sorted arc-interval contains bearing 0, then seed the
-    // alternation there: crossing the ring's own boundary always flips
-    // inside/outside, so one known fact determines every other crossing's
-    // status.
-    std::size_t refK = N - 1;
-    for (std::size_t k = 0; k < N; ++k) {
-        const float a = bearing[clipOrder[k]];
-        const float b = bearing[clipOrder[(k + 1) % N]];
-        if (k + 1 < N) {
-            if (a <= 0.0f && 0.0f < b) {
-                refK = k;
-                break;
-            }
-        } else {
-            if (0.0f >= a || 0.0f < b) {
-                refK = k;
-                break;
-            }
-        }
     }
 
     bool clipIsEntry[2 * kMaxRingExcursions];

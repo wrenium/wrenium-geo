@@ -7,6 +7,7 @@
 
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/detail/azimuthal/clip.h"
+#include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/projection.h"
 
 using namespace wrenium::geo;
@@ -334,6 +335,59 @@ TEST_CASE("clip: a ring mostly outside the clip circle traces the long way aroun
             }
             CHECK(std::fabs(gap) <= kMaxAllowedBearingGapRad);
         }
+    }
+}
+
+TEST_CASE("clip: a coastline ring near bearing 0 stays correctly clipped as radius sweeps past it (real bug regression)")
+{
+    // The actual Sulawesi (Indonesia) coastline ring from the checked-in
+    // world coastline dataset, centered near it, clipped at 454 and 455 km
+    // -- the exact real-world case that found this bug. clipRingToSink used
+    // to seed its entry/exit alternation by ray-casting one fixed-bearing
+    // (0 degrees / "north") point on the clip boundary against the raw
+    // ring; that reference point's raw position moves as the clip radius
+    // changes, and here it swept across this ring's own coastline between
+    // 454 and 455 km, flipping the seed and corrupting the ring's topology
+    // (a correct ~38-point trace became a wrong 126-point one, plus a
+    // spurious extra ring) even though nothing about the ring's actual
+    // excursion into the clip circle changed.
+    const GeoPoint center = makeGeoPoint(-4.9635f, 121.8874f);
+
+    // clang-format off
+    const GeoPoint ring[] = {
+        {0.024794724f, 2.185847759f}, {0.007454321f, 2.171836138f}, {0.004116220f, 2.158704042f},
+        {0.007513403f, 2.141927958f}, {0.006656722f, 2.112836361f}, {0.004145761f, 2.097568035f},
+        {-0.009058941f, 2.095117569f}, {-0.024597360f, 2.110700130f}, {-0.016680447f, 2.120125055f},
+        {-0.010742762f, 2.152672291f}, {-0.018777838f, 2.151289940f}, {-0.016237337f, 2.143687248f},
+        {-0.026487967f, 2.136084557f}, {-0.033252791f, 2.120690584f}, {-0.055615116f, 2.137215376f},
+        {-0.061611883f, 2.134073734f}, {-0.081758656f, 2.149719000f}, {-0.093220457f, 2.149593353f},
+        {-0.098330997f, 2.140294313f}, {-0.092216067f, 2.133445501f}, {-0.077918358f, 2.141865015f},
+        {-0.084683187f, 2.124711752f}, {-0.079838507f, 2.120376348f}, {-0.073103227f, 2.122638226f},
+        {-0.062882133f, 2.110071898f}, {-0.045866679f, 2.111391306f}, {-0.051154468f, 2.099704504f},
+        {-0.071508028f, 2.101212502f}, {-0.096499473f, 2.101903677f}, {-0.099010438f, 2.090845108f},
+        {-0.093899891f, 2.083368063f}, {-0.077829741f, 2.088331699f}, {-0.060991529f, 2.085629940f},
+        {-0.060873363f, 2.078278542f}, {-0.048909374f, 2.072875023f}, {-0.037477113f, 2.080100775f},
+        {-0.023622517f, 2.082613945f}, {0.002698265f, 2.091347694f}, {0.009876660f, 2.094991922f},
+        {0.022845037f, 2.109883308f}, {0.017704951f, 2.123517990f}, {0.015282612f, 2.145509243f},
+        {0.016021131f, 2.165552855f}, {0.028694099f, 2.182831764f},
+    };
+    // clang-format on
+
+    for (const float rangeKm : {454.0f, 455.0f}) {
+        CAPTURE(rangeKm);
+        const float clipRadius = rangeKm / kEarthRadiusKm;
+
+        Buffer<GeoPoint, 256> output;
+        std::size_t outputCount = 0;
+        const Error err = clipRing(ring, sizeof(ring) / sizeof(ring[0]), center, clipRadius, output, outputCount);
+        REQUIRE(err == Error::Ok);
+
+        // The correct trace is close to the ring's own 44 points (some
+        // dropped as clipped-out, a few added at crossings); the corrupted-
+        // topology symptom this bug produced was a ~126-point trace instead
+        // (bridging the long way around the clip circle due to a mispaired
+        // crossing).
+        CHECK(outputCount < 80);
     }
 }
 
