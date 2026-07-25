@@ -7,6 +7,7 @@
 #include <wrenium/geo/pipeline.h>
 #include <wrenium/geo/projection.h>
 #include <wrenium/geo/svg_emitter.h>
+#include <wrenium/geo/viewport.h>
 
 #include "BinaryPathDecoder.h"
 #include "world_borders_110m.h"
@@ -51,12 +52,10 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     }
 
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
-
-    const float clipRadiusRad = static_cast<float>(clipRadiusKm) / wrenium::geo::kEarthRadiusKm;
-    const float scale = static_cast<float>(viewportRadiusPx / clipRadiusKm); // output units per km
+    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
     const wrenium::geo::Error pipelineErr = wrenium::geo::projectRings(
-        m_workspace, m_input, center, clipRadiusRad, scale);
+        m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -98,12 +97,10 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     }
 
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
-
-    const float clipRadiusRad = static_cast<float>(clipRadiusKm) / wrenium::geo::kEarthRadiusKm;
-    const float scale = static_cast<float>(viewportRadiusPx / clipRadiusKm); // output units per km
+    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
     const wrenium::geo::Error pipelineErr = wrenium::geo::projectLines(
-        m_borderWorkspace, m_borderInput, center, clipRadiusRad, scale);
+        m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -138,14 +135,12 @@ QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double cente
 
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
     const wrenium::geo::GeoPoint rawPoint = wrenium::geo::makeGeoPoint(static_cast<float>(lat), static_cast<float>(lon));
+    // Same makeViewport() call computeCoastlineSvgPath/computeBorderSvgPath
+    // use, so a marker placed via this method's result lands exactly where
+    // the SVG/binary path output puts the same location.
+    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
-    const float clipRadiusRad = static_cast<float>(clipRadiusKm) / wrenium::geo::kEarthRadiusKm;
-    // Same "output units per km" formula computeCoastlineSvgPath/computeBorderSvgPath
-    // use internally, so a marker placed via this method's result lands
-    // exactly where the SVG/binary path output puts the same location.
-    const float scale = static_cast<float>(viewportRadiusPx / clipRadiusKm);
-
-    const wrenium::geo::ProjectedPoint projected = wrenium::geo::projectPoint(rawPoint, center, clipRadiusRad, scale);
+    const wrenium::geo::ProjectedPoint projected = wrenium::geo::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale);
 
     if (!projected.visible) {
         return {0.0, 0.0, false};
