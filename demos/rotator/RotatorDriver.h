@@ -9,9 +9,7 @@
 #include <qqmlintegration.h>
 
 // Stand-in for the actual rotator hardware interface (serial/CAT control,
-// GPIO step/direction lines, etc. on a real embedded target) -- deliberately
-// NOT part of the wrenium-geo library itself (the library only computes/
-// projects geometry, it never talks to any device). This desktop
+// GPIO step/direction lines, etc. on a real embedded target). This desktop
 // stub simulates a physical rotator's slow motor movement (a fixed degrees-
 // per-tick rate toward whatever heading was last requested, always via the
 // shorter rotational direction) and logs each step to the console, so the

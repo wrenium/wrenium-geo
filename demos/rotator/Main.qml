@@ -164,8 +164,8 @@ ApplicationWindow {
     }
 
     // Hardware-interface stub -- see the note above headingDeg/
-    // targetHeadingDeg. Not part of the wrenium-geo library; a real embedded
-    // build would swap this for an actual serial/CAT/GPIO driver.
+    // targetHeadingDeg. A real embedded build would swap this for an
+    // actual serial/CAT/GPIO driver.
     RotatorDriver {
         id: rotatorDriver
         objectName: "rotatorDriver"
@@ -332,9 +332,9 @@ ApplicationWindow {
                 width: discRadius * 2
                 height: width
                 radius: width / 2
-                color: "#132a3d" // sea -- deep, muted steel-blue, not a bright
-                                 // "map app" blue, to match the instrument
-                                 // panel's dark/desaturated palette
+                color: "#132a3d" // sea -- deep, muted steel-blue, matching
+                                 // the instrument panel's dark/desaturated
+                                 // palette
                 border.color: "#0a1420"
             }
 
