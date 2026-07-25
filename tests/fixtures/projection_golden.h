@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_TESTS_PROJECTION_GOLDEN_H
-#define WRENIUM_GEO_TESTS_PROJECTION_GOLDEN_H
+#pragma once
 
 #include <cstddef>
 
@@ -94,5 +93,3 @@ inline const ProjectionGoldenCase *projectionGoldenCases(std::size_t &count)
 }
 
 } // namespace wrenium_geo_tests
-
-#endif // WRENIUM_GEO_TESTS_PROJECTION_GOLDEN_H
