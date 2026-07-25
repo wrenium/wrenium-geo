@@ -33,7 +33,7 @@ public:
     {
         out.clear();
 
-        constexpr std::size_t headerSize = 12; // magic + version + elementCount, 4 bytes each
+        constexpr std::size_t headerSize = sizeof(wrenium::geo::PathBinaryHeader);
         if (byteCount < headerSize) {
             return wrenium::geo::Error::TruncatedData;
         }

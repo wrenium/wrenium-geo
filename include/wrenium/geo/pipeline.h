@@ -51,7 +51,7 @@ inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, 
     geometry.ringMinLat.clear();
     geometry.ringMaxLat.clear();
 
-    constexpr std::size_t headerSize = 12; // magic + version + ringCount, 4 bytes each
+    constexpr std::size_t headerSize = sizeof(InputGeometryHeader);
     if (byteCount < headerSize) {
         return Error::TruncatedData;
     }
