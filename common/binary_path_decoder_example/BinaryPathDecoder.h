@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 Tommi Tauriainen
 
-#ifndef WRENIUM_GEO_COMMON_BINARY_PATH_DECODER_H
-#define WRENIUM_GEO_COMMON_BINARY_PATH_DECODER_H
+#pragma once
 
 #include <cstddef>
 #include <cstdint>
@@ -132,5 +131,3 @@ private:
 };
 
 } // namespace BinaryPathDecoderExample
-
-#endif // WRENIUM_GEO_COMMON_BINARY_PATH_DECODER_H
