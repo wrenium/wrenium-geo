@@ -31,9 +31,6 @@ template <typename Commands = PathCommands>
 class BinaryPathEmitter
 {
 public:
-    /// Named encode(), not emit() -- some frameworks define `emit` as a
-    /// macro, which would silently mangle a method literally named emit()
-    /// in any translation unit that also includes them.
     /// @param points Flat array covering every ring back to back.
     /// @param ringSizes Point count of ring i is `ringSizes[i]`; rings with
     /// fewer than 2 points are skipped.
