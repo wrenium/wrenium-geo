@@ -25,7 +25,7 @@ ApplicationWindow {
     property real centerLatDeg: initialLat
     property real centerLonDeg: initialLon
     property real rangeKm: initialRange
-    property string currentSvgPath: ""
+    property string currentCoastlineSvgPath: ""
     property string currentBorderSvgPath: ""
 
     WreniumGeoBridge {
@@ -34,7 +34,7 @@ ApplicationWindow {
 
     function recomputePath() {
         const viewportRadiusPx = Math.min(mapArea.width, mapArea.height) / 2
-        currentSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
+        currentCoastlineSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
             centerLatDeg, centerLonDeg, rangeKm, viewportRadiusPx, false)
         currentBorderSvgPath = wreniumGeoBridge.computeBorderSvgPath(
             centerLatDeg, centerLonDeg, rangeKm, viewportRadiusPx, false)
@@ -222,7 +222,7 @@ ApplicationWindow {
                     strokeColor: "#c9d4bd"
                     strokeWidth: 1
                     fillRule: ShapePath.OddEvenFill
-                    PathSvg { path: root.currentSvgPath }
+                    PathSvg { path: root.currentCoastlineSvgPath }
                 }
                 ShapePath {
                     fillColor: "transparent"

@@ -54,7 +54,7 @@ ApplicationWindow {
     property real beamwidthDeg: 50.0
     property bool useBinaryEmitter: false
     property bool showBorders: true
-    property string currentSvgPath: ""
+    property string currentCoastlineSvgPath: ""
     property string currentBorderSvgPath: ""
     // Dragging the map either pans it (false) or aims the heading wedge
     // at the drag position (true) -- see aimAt() below.
@@ -173,7 +173,7 @@ ApplicationWindow {
 
     function recomputePath() {
         const viewportRadiusPx = Math.min(mapArea.width, mapArea.height) / 2
-        currentSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
+        currentCoastlineSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
             centerLatDeg, centerLonDeg, clipRadiusKm, viewportRadiusPx, useBinaryEmitter)
         // Border lines are a fully separate, optional pipeline call --
         // skipped entirely, including its own recompute cost, whenever
@@ -415,7 +415,7 @@ ApplicationWindow {
                         // (whichever emitter produced it, WreniumGeoBridge
                         // decides based on useBinaryEmitter) reaches Qt
                         // Quick.
-                        path: root.currentSvgPath
+                        path: root.currentCoastlineSvgPath
                     }
                 }
 

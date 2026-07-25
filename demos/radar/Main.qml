@@ -37,7 +37,7 @@ Window {
     // doesn't feel cramped.
     readonly property real rangeKm: 600.0
 
-    property string currentSvgPath: ""
+    property string currentCoastlineSvgPath: ""
     property string currentBorderSvgPath: ""
 
     WreniumGeoBridge {
@@ -46,7 +46,7 @@ Window {
 
     function recomputePath() {
         const viewportRadiusPx = Math.min(scope.width, scope.height) / 2
-        currentSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
+        currentCoastlineSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
             centerLatDeg, centerLonDeg, rangeKm, viewportRadiusPx, false)
         currentBorderSvgPath = wreniumGeoBridge.computeBorderSvgPath(
             centerLatDeg, centerLonDeg, rangeKm, viewportRadiusPx, false)
@@ -191,7 +191,7 @@ Window {
                 strokeWidth: 1
                 fillRule: ShapePath.OddEvenFill
                 PathSvg {
-                    path: root.currentSvgPath
+                    path: root.currentCoastlineSvgPath
                 }
             }
             ShapePath {
