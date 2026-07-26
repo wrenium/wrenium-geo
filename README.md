@@ -52,7 +52,6 @@ for ring, `svg_emitter.h`/`binary_emitter.h` for run).
 include/wrenium/geo/          public headers (namespace wrenium::geo),
                              header-only
 tests/                       doctest suite
-extern/doctest/              doctest, vendored as a git submodule
 tools/wrenium_geo_convert/    offline TopoJSON -> input-geometry converter
                              tool (builds as `topojson2bin`)
 common/wrenium_geo_qt_bridge/ shared C++/QML bridge (WreniumGeoBridge) --
@@ -167,11 +166,12 @@ wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSi
 
 ## Building
 
-Requires CMake >= 3.21 and a C++17 compiler. Clone with submodules (for
-doctest):
+Requires CMake >= 3.21 and a C++17 compiler. Test/tool dependencies
+(doctest, nlohmann/json) are fetched automatically at configure time --
+no submodules to init.
 
 ```sh
-git clone --recursive <repo-url>
+git clone <repo-url>
 cd wrenium-geo
 cmake -S . -B build
 cmake --build build

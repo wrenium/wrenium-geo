@@ -19,9 +19,9 @@ target_include_directories(wrenium-geo INTERFACE
 
 target_compile_features(wrenium-geo INTERFACE cxx_std_17)
 
-# Shared warning flags for this project's own targets (not extern/doctest or
-# FetchContent'd third-party code) -- link PRIVATE rather than duplicating
-# the MSVC/else block in every subdirectory's CMakeLists.txt.
+# Shared warning flags for this project's own targets (not FetchContent'd
+# third-party code) -- link PRIVATE rather than duplicating the MSVC/else
+# block in every subdirectory's CMakeLists.txt.
 add_library(wrenium_geo_warnings INTERFACE)
 if(MSVC)
     target_compile_options(wrenium_geo_warnings INTERFACE /W4)
@@ -34,7 +34,15 @@ if(PROJECT_IS_TOP_LEVEL)
 endif()
 
 if(PROJECT_IS_TOP_LEVEL AND BUILD_TESTING)
-    add_subdirectory(extern/doctest)
+    include(FetchContent)
+    FetchContent_Declare(
+        doctest
+        GIT_REPOSITORY https://github.com/doctest/doctest.git
+        GIT_TAG v2.5.3
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(doctest)
+
     add_subdirectory(tests)
 endif()
 

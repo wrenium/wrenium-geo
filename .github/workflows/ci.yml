@@ -24,8 +24,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Configure
         shell: bash
@@ -46,8 +44,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Configure
         run: cmake -S . -B build
@@ -62,8 +58,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -84,7 +78,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
           path: wrenium-geo
 
       - name: Create a minimal consumer project
@@ -117,7 +110,7 @@ jobs:
 
       - name: Check formatting
         run: |
-          files=$(find . -name "*.h" -o -name "*.cpp" | grep -v "/extern/doctest/")
+          files=$(find . -name "*.h" -o -name "*.cpp")
           clang-format --dry-run --Werror $files
 
   docs:

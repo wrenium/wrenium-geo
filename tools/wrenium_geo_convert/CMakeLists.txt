@@ -25,17 +25,8 @@ add_executable(topojson2bin src/main.cpp)
 target_link_libraries(topojson2bin PRIVATE topojson2bin_lib wrenium_geo_warnings)
 
 if(BUILD_TESTING)
-    # Reuse extern/doctest if the parent build already vendored it.
-    if(NOT TARGET doctest::doctest)
-        FetchContent_Declare(
-            doctest
-            GIT_REPOSITORY https://github.com/doctest/doctest.git
-            GIT_TAG v2.4.11
-            GIT_SHALLOW TRUE
-        )
-        FetchContent_MakeAvailable(doctest)
-    endif()
-
+    # doctest::doctest is already available -- the root CMakeLists.txt
+    # FetchContent's it before this subdirectory is ever added.
     add_executable(topojson2bin_tests tests/test_topojson_decoder.cpp)
     target_link_libraries(topojson2bin_tests PRIVATE topojson2bin_lib doctest::doctest wrenium_geo_warnings)
 

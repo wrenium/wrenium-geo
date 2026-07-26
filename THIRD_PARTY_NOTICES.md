@@ -27,12 +27,12 @@ test in `isCenterEnclosedByRings()` from `src/polygonContains.js`.
 
 ## doctest (test dependency)
 
-Vendored as a git submodule at `extern/doctest`, used only by the test suite
-(`tests/`), not by the library itself.
+Fetched at configure time (CMake FetchContent, tag v2.5.3), not vendored.
+Used only by the test suite (`tests/`), not by the library itself.
 
     doctest
     Copyright (c) 2016-2023 Viktor Kirilov
-    MIT License -- see extern/doctest/LICENSE.txt
+    MIT License -- https://github.com/doctest/doctest
 
 ## world-atlas (topojson2bin test fixtures / expected input format)
 
