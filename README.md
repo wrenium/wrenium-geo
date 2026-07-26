@@ -26,8 +26,8 @@ RTTI anywhere in the library.
   operation reports failure via an `Error` enum instead; the test suite
   always compiles under `-fno-exceptions -fno-rtti` (see `tests/CMakeLists.txt`).
 - **Two output formats**: an SVG path `d` string, or a compact tagged-float
-  binary stream (magic + version header, little-endian) with a matching
-  decoder back to SVG.
+  binary stream (magic + version header, little-endian) -- see
+  `common/binary_path_decoder_example` for a reference decoder.
 - **TopoJSON converter** (`topojson2bin`, in `tools/wrenium_geo_convert`) turns
   [world-atlas](https://github.com/topojson/world-atlas) TopoJSON data into
   the library's own binary input-geometry format, output as both a raw
