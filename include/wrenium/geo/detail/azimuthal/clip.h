@@ -297,21 +297,35 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     // each one separately recomputing sin/cos of center.latRad -- see
     // RotationFrame's own comment (detail/projection.h) for the measured win.
     const RotationFrame frame = makeRotationFrame(center);
+    const float threshold = kHalfPi - clipRadiusRad;
 
     // Classifies rawPoints[idx] as inside/outside, rotating it only if the
-    // cheap bound can't already prove it's outside. `hasRotated` reports
-    // whether `rotated` was actually populated. Caches the rotated value
-    // into rotatedCache[idx] so pass 2 can read it back instead of
-    // rotating the same point again.
+    // cheap bound can't already prove it's outside. Uses rotateBegin()
+    // rather than rotate() -- most points that reach this point still fail
+    // the real circle test (see rotateBegin()'s own comment), so the
+    // bearing atan2f rotate() would compute is deferred via rotateFinish()
+    // until a point is confirmed inside. `hasRotated` reports whether
+    // `rotated` was actually populated (bearing included); a point that
+    // fails here gets the same hasRotated=false treatment as one that
+    // failed the cheap check, so the pass-1 walk below (which needs a
+    // crossing-adjacent point's bearing regardless of whether it survived)
+    // transparently re-rotates it in full via its own existing fallback.
+    // Caches the rotated value into rotatedCache[idx] so pass 2 can read it
+    // back instead of rotating the same point again.
     auto classify = [&](std::size_t idx, GeoPoint &rotated, bool &hasRotated) -> bool {
         if (detail_clip::isCheaplyOutside(rawPoints[idx], center, clipRadiusRad)) {
             hasRotated = false;
             return false;
         }
-        rotated = rotate(rawPoints[idx], frame);
+        const RotatePartial partial = rotateBegin(rawPoints[idx], frame);
+        if (partial.rotatedLat < threshold) {
+            hasRotated = false;
+            return false;
+        }
+        rotated = rotateFinish(partial);
         rotatedCache[idx] = rotated;
         hasRotated = true;
-        return detail_clip::isInsideClipCircle(rotated, clipRadiusRad);
+        return true;
     };
 
     // Find a starting vertex that's actually inside, and begin the walk
@@ -494,8 +508,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     // Is the reference point (on the clip boundary, at refBearing) inside
     // the ring? Raw-lat/lon ray-cast via detail_clip::unrotate to recover
     // the reference point's raw position -- same technique as
-    // isCenterEnclosedByRings below.
-    const float threshold = kHalfPi - clipRadiusRad;
+    // isCenterEnclosedByRings below. `threshold` computed once, above.
     const GeoPoint refRotated{threshold, refBearing};
     const GeoPoint refRaw = detail_clip::unrotate(refRotated, center);
 
@@ -703,15 +716,23 @@ inline Error clipLineToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
 
     // Built once per line, reused by every rotate() call below.
     const RotationFrame frame = makeRotationFrame(center);
+    const float threshold = kHalfPi - clipRadiusRad;
 
+    // See clipRingToSink's identical classify() for why rotateBegin()/
+    // rotateFinish() replace a plain rotate() call here.
     auto classify = [&](std::size_t idx, GeoPoint &rotated, bool &hasRotated) -> bool {
         if (detail_clip::isCheaplyOutside(rawPoints[idx], center, clipRadiusRad)) {
             hasRotated = false;
             return false;
         }
-        rotated = rotate(rawPoints[idx], frame);
+        const RotatePartial partial = rotateBegin(rawPoints[idx], frame);
+        if (partial.rotatedLat < threshold) {
+            hasRotated = false;
+            return false;
+        }
+        rotated = rotateFinish(partial);
         hasRotated = true;
-        return detail_clip::isInsideClipCircle(rotated, clipRadiusRad);
+        return true;
     };
 
     std::size_t runCount = 0;
