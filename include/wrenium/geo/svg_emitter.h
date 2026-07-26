@@ -17,6 +17,12 @@
 /// "M x,y L x,y ... Z " per ring. Even-odd fill is assumed by consumers
 /// (SVG's `fill-rule="evenodd"`) -- no hole/outer ring tracking is needed
 /// here.
+///
+/// Only the first point of a ring/run gets an explicit command letter
+/// ("M ... L ..."); every point after that is just its own "x,y " --
+/// legal per the SVG path grammar, which has a coordinate pair after a
+/// command letter implicitly repeat that command until the next letter
+/// appears, and measurably smaller output for the same rendered shape.
 
 namespace wrenium::geo {
 
@@ -44,15 +50,17 @@ inline Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std:
         for (std::size_t i = 0; i < ringSize; ++i) {
             const Point &p = points[pointOffset + i];
 
-            Error err = out.pushBack(i == 0 ? 'M' : 'L');
-            if (err != Error::Ok) {
-                return err;
+            if (i == 0) {
+                Error err = out.pushBack('M');
+                if (err != Error::Ok) {
+                    return err;
+                }
+                err = out.pushBack(' ');
+                if (err != Error::Ok) {
+                    return err;
+                }
             }
-            err = out.pushBack(' ');
-            if (err != Error::Ok) {
-                return err;
-            }
-            err = appendFixedFloat(out, p.x);
+            Error err = appendFixedFloat(out, p.x);
             if (err != Error::Ok) {
                 return err;
             }
@@ -63,6 +71,16 @@ inline Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std:
             err = appendFixedFloat(out, p.y);
             if (err != Error::Ok) {
                 return err;
+            }
+            if (i == 0) {
+                err = out.pushBack(' ');
+                if (err != Error::Ok) {
+                    return err;
+                }
+                err = out.pushBack('L');
+                if (err != Error::Ok) {
+                    return err;
+                }
             }
             err = out.pushBack(' ');
             if (err != Error::Ok) {
@@ -115,15 +133,17 @@ inline Error emitSvgLinePath(const Point *points, const std::size_t *runSizes, s
         for (std::size_t i = 0; i < runSize; ++i) {
             const Point &p = points[pointOffset + i];
 
-            Error err = out.pushBack(i == 0 ? 'M' : 'L');
-            if (err != Error::Ok) {
-                return err;
+            if (i == 0) {
+                Error err = out.pushBack('M');
+                if (err != Error::Ok) {
+                    return err;
+                }
+                err = out.pushBack(' ');
+                if (err != Error::Ok) {
+                    return err;
+                }
             }
-            err = out.pushBack(' ');
-            if (err != Error::Ok) {
-                return err;
-            }
-            err = appendFixedFloat(out, p.x);
+            Error err = appendFixedFloat(out, p.x);
             if (err != Error::Ok) {
                 return err;
             }
@@ -134,6 +154,16 @@ inline Error emitSvgLinePath(const Point *points, const std::size_t *runSizes, s
             err = appendFixedFloat(out, p.y);
             if (err != Error::Ok) {
                 return err;
+            }
+            if (i == 0) {
+                err = out.pushBack(' ');
+                if (err != Error::Ok) {
+                    return err;
+                }
+                err = out.pushBack('L');
+                if (err != Error::Ok) {
+                    return err;
+                }
             }
             err = out.pushBack(' ');
             if (err != Error::Ok) {
