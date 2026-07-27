@@ -20,7 +20,7 @@
 /// floats) and keeps project() a true in-place transform over stageB's
 /// storage.
 
-namespace wrenium::geo {
+namespace wrenium::geo::detail {
 
 /// Storage for one point that's either sphere-space (GeoPoint, via #geo)
 /// or planar/projected (Point, via #point), never both at once -- see
@@ -41,4 +41,4 @@ union PointStorage
     }
 };
 
-} // namespace wrenium::geo
+} // namespace wrenium::geo::detail

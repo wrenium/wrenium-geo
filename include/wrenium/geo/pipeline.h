@@ -233,7 +233,7 @@ inline Error projectRings(
         std::size_t outSize = 0;
         const Error err = azimuthal::clipRingToSink(
             &inputPoints[inputOffset], ringSize, center, clipRadiusRad, workspace.ringRotatedCache,
-            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(PointStorage(p)); },
+            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(detail::PointStorage(p)); },
             [&workspace](std::size_t cycleSize) -> Error {
                 if (cycleSize < 3) {
                     // Not a usable closed shape -- drop just this cycle's
@@ -267,7 +267,7 @@ inline Error projectRings(
             std::size_t outSize = 0;
             const Error err = azimuthal::detail::emitFullClipCircle(
                 clipRadiusRad,
-                [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(PointStorage(p)); },
+                [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(detail::PointStorage(p)); },
                 outSize);
             if (err != Error::Ok) {
                 return err;
@@ -354,7 +354,7 @@ inline Error projectLines(
         std::size_t outSize = 0;
         const Error err = azimuthal::clipLineToSink(
             &inputPoints[inputOffset], lineSize, center, clipRadiusRad,
-            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(PointStorage(p)); },
+            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(detail::PointStorage(p)); },
             [&workspace](std::size_t runSize) -> Error {
                 if (runSize < 2) {
                     // Not a usable drawable segment -- drop just this run's

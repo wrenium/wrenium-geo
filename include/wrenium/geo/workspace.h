@@ -48,7 +48,7 @@ struct Workspace
     // projectedPoints()/projectedRingSizes() below to read the result
     // instead. Element type is a union (detail/point_storage.h), not
     // GeoPoint or Point directly; see that file for why.
-    Buffer<PointStorage, MaxPoints> stageB;
+    Buffer<detail::PointStorage, MaxPoints> stageB;
     // Ring sizes for stageB, post-clip -- read via projectedRingSizes()
     // instead.
     Buffer<std::size_t, MaxRings> ringSizesB;
