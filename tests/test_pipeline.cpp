@@ -12,6 +12,7 @@
 #include "wrenium/geo/workspace.h"
 
 using namespace wrenium::geo;
+using namespace wrenium::geo::azimuthal;
 
 namespace {
 

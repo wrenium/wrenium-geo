@@ -28,9 +28,9 @@
 /// a typical (non-whole-world) view don't survive clipping, so this avoids
 /// rotating them at all.
 
-namespace wrenium::geo {
+namespace wrenium::geo::azimuthal {
 
-namespace detail_clip {
+namespace detail {
 
 inline bool isInsideClipCircle(const GeoPoint &rotatedPoint, float clipRadiusRad)
 {
@@ -248,7 +248,7 @@ inline Error emitFullClipCircle(float clipRadiusRad, Sink &&sink, std::size_t &o
     return Error::Ok;
 }
 
-} // namespace detail_clip
+} // namespace detail
 
 /// Clips one closed ring of *unrotated* input points against the circle of
 /// angular radius @p clipRadiusRad around @p center, pushing surviving/
@@ -313,7 +313,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     // Caches the rotated value into rotatedCache[idx] so pass 2 can read it
     // back instead of rotating the same point again.
     auto classify = [&](std::size_t idx, GeoPoint &rotated, bool &hasRotated) -> bool {
-        if (detail_clip::isCheaplyOutside(rawPoints[idx], center, clipRadiusRad)) {
+        if (detail::isCheaplyOutside(rawPoints[idx], center, clipRadiusRad)) {
             hasRotated = false;
             return false;
         }
@@ -375,7 +375,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
             if (!prevHasRotated) {
                 prevRotated = rotate(rawPoints[prevIdx], frame);
             }
-            const GeoPoint crossing = detail_clip::clipBoundaryCrossing(prevRotated, currRotated, clipRadiusRad);
+            const GeoPoint crossing = detail::clipBoundaryCrossing(prevRotated, currRotated, clipRadiusRad);
             if (excursionCount >= kMaxRingExcursions) {
                 return Error::TooManyClipCrossings;
             }
@@ -386,7 +386,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
             if (!currHasRotated) {
                 currRotated = rotate(rawPoints[i], frame);
             }
-            const GeoPoint crossing = detail_clip::clipBoundaryCrossing(prevRotated, currRotated, clipRadiusRad);
+            const GeoPoint crossing = detail::clipBoundaryCrossing(prevRotated, currRotated, clipRadiusRad);
             if (excursionCount >= kMaxRingExcursions) {
                 return Error::TooManyClipCrossings;
             }
@@ -477,7 +477,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
         clipPrev[cur] = clipOrder[(k + N - 1) % N];
     }
 
-    using detail_clip::wrapPi;
+    using detail::wrapPi;
 
     // Reference point for seeding the entry/exit alternation below, plus
     // which sorted interval (refK) it falls in. Deliberately *not* a fixed
@@ -506,11 +506,11 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     }
 
     // Is the reference point (on the clip boundary, at refBearing) inside
-    // the ring? Raw-lat/lon ray-cast via detail_clip::unrotate to recover
+    // the ring? Raw-lat/lon ray-cast via detail::unrotate to recover
     // the reference point's raw position -- same technique as
     // isCenterEnclosedByRings below. `threshold` computed once, above.
     const GeoPoint refRotated{threshold, refBearing};
-    const GeoPoint refRaw = detail_clip::unrotate(refRotated, center);
+    const GeoPoint refRaw = detail::unrotate(refRotated, center);
 
     bool refInsideRing;
     {
@@ -632,7 +632,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
                 if (isSubject) {
                     err = emitSegmentForward(segOf[current]);
                 } else {
-                    err = detail_clip::emitBoundaryArc(bearing[current], bearing[clipNext[current]], +1, clipRadiusRad, sink, outputCount);
+                    err = detail::emitBoundaryArc(bearing[current], bearing[clipNext[current]], +1, clipRadiusRad, sink, outputCount);
                 }
                 if (err != Error::Ok) {
                     return err;
@@ -643,7 +643,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
                 if (isSubject) {
                     err = emitSegmentBackward(segOf[subjectPrev[current]]);
                 } else {
-                    err = detail_clip::emitBoundaryArc(bearing[current], bearing[clipPrev[current]], -1, clipRadiusRad, sink, outputCount);
+                    err = detail::emitBoundaryArc(bearing[current], bearing[clipPrev[current]], -1, clipRadiusRad, sink, outputCount);
                 }
                 if (err != Error::Ok) {
                     return err;
@@ -721,7 +721,7 @@ inline Error clipLineToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     // See clipRingToSink's identical classify() for why rotateBegin()/
     // rotateFinish() replace a plain rotate() call here.
     auto classify = [&](std::size_t idx, GeoPoint &rotated, bool &hasRotated) -> bool {
-        if (detail_clip::isCheaplyOutside(rawPoints[idx], center, clipRadiusRad)) {
+        if (detail::isCheaplyOutside(rawPoints[idx], center, clipRadiusRad)) {
             hasRotated = false;
             return false;
         }
@@ -765,8 +765,8 @@ inline Error clipLineToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
                 currRotated = rotate(rawPoints[i], frame);
             }
             const GeoPoint crossing = currInside
-                ? detail_clip::clipBoundaryCrossing(prevRotated, currRotated, clipRadiusRad)
-                : detail_clip::clipBoundaryCrossing(currRotated, prevRotated, clipRadiusRad);
+                ? detail::clipBoundaryCrossing(prevRotated, currRotated, clipRadiusRad)
+                : detail::clipBoundaryCrossing(currRotated, prevRotated, clipRadiusRad);
 
             const Error err = sink(crossing);
             if (err != Error::Ok) {
@@ -835,7 +835,7 @@ inline Error clipLineToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
 template <std::size_t MaxRings>
 inline bool isCenterEnclosedByRings(const GeoPoint *rawPoints, const Buffer<std::size_t, MaxRings> &ringSizes, const GeoPoint &center)
 {
-    using detail_clip::wrapPi;
+    using detail::wrapPi;
 
     bool inside = false;
     std::size_t offset = 0;
@@ -875,4 +875,4 @@ inline bool isCenterEnclosedByRings(const GeoPoint *rawPoints, const Buffer<std:
     return inside;
 }
 
-} // namespace wrenium::geo
+} // namespace wrenium::geo::azimuthal

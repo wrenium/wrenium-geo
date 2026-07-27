@@ -12,6 +12,7 @@
 #include "fixtures/projection_golden.h"
 
 using namespace wrenium::geo;
+using namespace wrenium::geo::azimuthal;
 using namespace wrenium_geo_tests;
 
 namespace {

@@ -11,6 +11,7 @@
 #include "wrenium/geo/projection.h"
 
 using namespace wrenium::geo;
+using namespace wrenium::geo::azimuthal;
 
 namespace {
 
@@ -123,7 +124,7 @@ TEST_CASE("clip: an edge crossing the boundary once is split at the crossing poi
 
     // The single excursion (around the one outside vertex) is bridged by an
     // arc tracing the clip circle in ~3 degree steps (detail/azimuthal/clip.h's
-    // detail_clip::emitBoundaryArc), so the exact output size depends on
+    // detail::emitBoundaryArc), so the exact output size depends on
     // that step resolution -- generous capacity, structural checks below
     // instead of a brittle exact count.
     Buffer<GeoPoint, 128> output;
@@ -171,7 +172,7 @@ TEST_CASE("clip: a ring crossing the boundary multiple times keeps every in-arc"
 
     // 128 is generous: 4 inside vertices + 2 crossings per excursion (8) +
     // boundary-arc points bridging each excursion's exit/entry bearing gap
-    // (detail/azimuthal/clip.h's detail_clip::emitBoundaryArc).
+    // (detail/azimuthal/clip.h's detail::emitBoundaryArc).
     Buffer<GeoPoint, 128> output;
     std::size_t outputCount = 0;
     const Error err = clipRing(ring.data(), ring.size(), center, clipRadius, output, outputCount);
@@ -573,7 +574,7 @@ TEST_CASE("clipLineToSink: sink overflow is reported as Error::CapacityExceeded,
     CHECK(output.size() == output.capacity());
 }
 
-// ---- detail_clip::unrotate: pole singularity regression ----
+// ---- detail::unrotate: pole singularity regression ----
 //
 // When center is exactly at a pole, unrotate()'s general formula hits a
 // singularity (see detail/azimuthal/clip.h's own comment) and can return the wrong
@@ -589,7 +590,7 @@ TEST_CASE("clip: unrotate recovers the correct longitude when center is exactly 
     // The exact reference point clipRingToSink's anchor fact uses: bearing
     // 0, at the clip radius.
     const GeoPoint rotated{kHalfPi - clipRadiusRad, 0.0f};
-    const GeoPoint raw = detail_clip::unrotate(rotated, center);
+    const GeoPoint raw = detail::unrotate(rotated, center);
 
     // At the north pole, every point at the same central angle shares the
     // same colatitude regardless of bearing.
@@ -619,8 +620,8 @@ TEST_CASE("clip: unrotate stays correct across several bearings at both poles, m
         for (const float bearingDeg : {0.0f, 45.0f, 90.0f, 180.0f, 270.0f}) {
             const GeoPoint rotated{kHalfPi - clipRadiusRad, bearingDeg * degToRad};
 
-            const GeoPoint atPole = detail_clip::unrotate(rotated, centerAtPole);
-            const GeoPoint nearPole = detail_clip::unrotate(rotated, centerNearPole);
+            const GeoPoint atPole = detail::unrotate(rotated, centerAtPole);
+            const GeoPoint nearPole = detail::unrotate(rotated, centerNearPole);
 
             CAPTURE(centerLatDeg);
             CAPTURE(bearingDeg);

@@ -18,7 +18,7 @@
 /// equal-area, ...) would replace just project() with its own radial
 /// formula and reuse rotation.h unchanged.
 
-namespace wrenium::geo {
+namespace wrenium::geo::azimuthal {
 
 /// Forward spherical azimuthal equidistant projection of an already-rotated
 /// point.
@@ -44,4 +44,4 @@ inline Point project(const GeoPoint &rotatedPoint, float scale)
     return projected;
 }
 
-} // namespace wrenium::geo
+} // namespace wrenium::geo::azimuthal

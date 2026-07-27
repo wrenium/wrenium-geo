@@ -30,7 +30,7 @@
 /// coincident points, where acos loses precision sharply. float/sinf/
 /// cosf/atan2f throughout, never double.
 
-namespace wrenium::geo {
+namespace wrenium::geo::azimuthal {
 
 /// Precomputed once-per-`center` quantities rotate() needs on every call:
 /// sin/cos of center.latRad, and center.lonRad itself. Building this once
@@ -149,4 +149,4 @@ inline GeoPoint rotate(const GeoPoint &point, const GeoPoint &center)
     return rotate(point, makeRotationFrame(center));
 }
 
-} // namespace wrenium::geo
+} // namespace wrenium::geo::azimuthal

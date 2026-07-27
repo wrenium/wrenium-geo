@@ -231,7 +231,7 @@ inline Error projectRings(
         // as independent closed subpaths instead of one incorrect loop
         // with a spurious connecting edge between two separate pieces. ----
         std::size_t outSize = 0;
-        const Error err = clipRingToSink(
+        const Error err = azimuthal::clipRingToSink(
             &inputPoints[inputOffset], ringSize, center, clipRadiusRad, workspace.ringRotatedCache,
             [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(PointStorage(p)); },
             [&workspace](std::size_t cycleSize) -> Error {
@@ -263,9 +263,9 @@ inline Error projectRings(
     // did produce output) never runs this O(total input points) fallback
     // scan at all.
     if (workspace.ringSizesB.size() == 0) {
-        if (isCenterEnclosedByRings(inputPoints.data(), inputRingSizes, center)) {
+        if (azimuthal::isCenterEnclosedByRings(inputPoints.data(), inputRingSizes, center)) {
             std::size_t outSize = 0;
-            const Error err = detail_clip::emitFullClipCircle(
+            const Error err = azimuthal::detail::emitFullClipCircle(
                 clipRadiusRad,
                 [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(PointStorage(p)); },
                 outSize);
@@ -284,7 +284,7 @@ inline Error projectRings(
     // ---- project: stageB in place (GeoPoint .geo -> Point .point) ----
     for (std::size_t i = 0; i < workspace.stageB.size(); ++i) {
         const GeoPoint rotatedClipped = workspace.stageB[i].geo;
-        workspace.stageB[i].point = project(rotatedClipped, scale);
+        workspace.stageB[i].point = azimuthal::project(rotatedClipped, scale);
     }
 
     return Error::Ok;
@@ -352,7 +352,7 @@ inline Error projectLines(
         // one incorrect run with a spurious connecting segment between two
         // separate pieces. ----
         std::size_t outSize = 0;
-        const Error err = clipLineToSink(
+        const Error err = azimuthal::clipLineToSink(
             &inputPoints[inputOffset], lineSize, center, clipRadiusRad,
             [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(PointStorage(p)); },
             [&workspace](std::size_t runSize) -> Error {
@@ -375,7 +375,7 @@ inline Error projectLines(
     // ---- project: stageB in place (GeoPoint .geo -> Point .point) ----
     for (std::size_t i = 0; i < workspace.stageB.size(); ++i) {
         const GeoPoint rotatedClipped = workspace.stageB[i].geo;
-        workspace.stageB[i].point = project(rotatedClipped, scale);
+        workspace.stageB[i].point = azimuthal::project(rotatedClipped, scale);
     }
 
     return Error::Ok;
@@ -409,19 +409,19 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
     ProjectedPoint result;
     result.point = Point{};
 
-    if (detail_clip::isCheaplyOutside(rawPoint, center, clipRadiusRad)) {
+    if (azimuthal::detail::isCheaplyOutside(rawPoint, center, clipRadiusRad)) {
         result.visible = false;
         return result;
     }
 
-    const GeoPoint rotated = rotate(rawPoint, center);
-    if (!detail_clip::isInsideClipCircle(rotated, clipRadiusRad)) {
+    const GeoPoint rotated = azimuthal::rotate(rawPoint, center);
+    if (!azimuthal::detail::isInsideClipCircle(rotated, clipRadiusRad)) {
         result.visible = false;
         return result;
     }
 
     result.visible = true;
-    result.point = project(rotated, scale);
+    result.point = azimuthal::project(rotated, scale);
     return result;
 }
 
