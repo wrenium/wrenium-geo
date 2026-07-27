@@ -5,6 +5,8 @@
 
 #include <cmath>
 
+#include "wrenium/f32math/atan2.h"
+#include "wrenium/f32math/trig.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/projection.h"
 
@@ -27,8 +29,8 @@
 /// projection actually needs.
 ///
 /// atan2-based, not acos-based: better conditioned near antipodal/
-/// coincident points, where acos loses precision sharply. float/sinf/
-/// cosf/atan2f throughout, never double.
+/// coincident points, where acos loses precision sharply. float
+/// throughout (via wrenium-f32math), never double.
 
 namespace wrenium::geo::azimuthal {
 
@@ -51,8 +53,7 @@ inline RotationFrame makeRotationFrame(const GeoPoint &center)
 {
     RotationFrame frame;
     frame.centerLonRad = center.lonRad;
-    frame.sinCenterLat = sinf(center.latRad);
-    frame.cosCenterLat = cosf(center.latRad);
+    f32math::sincos(center.latRad, frame.sinCenterLat, frame.cosCenterLat);
     return frame;
 }
 
@@ -91,10 +92,10 @@ inline RotatePartial rotateBegin(const GeoPoint &point, const RotationFrame &fra
 
     const float sinCenterLat = frame.sinCenterLat;
     const float cosCenterLat = frame.cosCenterLat;
-    const float sinPointLat = sinf(point.latRad);
-    const float cosPointLat = cosf(point.latRad);
-    const float sinDLon = sinf(dLon);
-    const float cosDLon = cosf(dLon);
+    float sinPointLat, cosPointLat;
+    f32math::sincos(point.latRad, sinPointLat, cosPointLat);
+    float sinDLon, cosDLon;
+    f32math::sincos(dLon, sinDLon, cosDLon);
 
     // Central angle (true angular distance from center to point), computed
     // via the atan2-based (Vincenty) formula -- not
@@ -105,7 +106,7 @@ inline RotatePartial rotateBegin(const GeoPoint &point, const RotationFrame &fra
     const float crossTermB = cosCenterLat * sinPointLat - sinCenterLat * cosPointLat * cosDLon;
     const float centralAngleNumerator = sqrtf(crossTermA * crossTermA + crossTermB * crossTermB);
     const float centralAngleDenominator = sinCenterLat * sinPointLat + cosCenterLat * cosPointLat * cosDLon;
-    const float centralAngle = atan2f(centralAngleNumerator, centralAngleDenominator);
+    const float centralAngle = f32math::atan2(centralAngleNumerator, centralAngleDenominator);
 
     RotatePartial partial;
     partial.rotatedLat = kHalfPi - centralAngle;
@@ -121,7 +122,7 @@ inline GeoPoint rotateFinish(const RotatePartial &partial)
 {
     GeoPoint rotated;
     rotated.latRad = partial.rotatedLat;
-    rotated.lonRad = atan2f(partial.crossTermA, partial.crossTermB);
+    rotated.lonRad = f32math::atan2(partial.crossTermA, partial.crossTermB);
     return rotated;
 }
 

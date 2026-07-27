@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 
+#include "wrenium/f32math/asin.h"
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/detail/azimuthal/rotation.h"
 #include "wrenium/geo/error.h"
@@ -178,11 +179,12 @@ inline GeoPoint unrotate(const GeoPoint &rotated, const GeoPoint &center)
     const float centralAngle = kHalfPi - rotated.latRad;
     const float bearing = rotated.lonRad;
 
-    const float cosCenterLat = cosf(center.latRad);
+    float sinCenterLat, cosCenterLat;
+    f32math::sincos(center.latRad, sinCenterLat, cosCenterLat);
 
     constexpr float kPoleCosEpsilon = 1e-4f;
     if (cosCenterLat > -kPoleCosEpsilon && cosCenterLat < kPoleCosEpsilon) {
-        const bool northPole = sinf(center.latRad) > 0.0f;
+        const bool northPole = sinCenterLat > 0.0f;
         GeoPoint result;
         result.latRad = northPole ? (kHalfPi - centralAngle) : (centralAngle - kHalfPi);
         result.lonRad = center.lonRad + (northPole ? (kPi - bearing) : bearing);
@@ -195,18 +197,19 @@ inline GeoPoint unrotate(const GeoPoint &rotated, const GeoPoint &center)
         return result;
     }
 
-    const float sinCenterLat = sinf(center.latRad);
-    const float sinAngle = sinf(centralAngle);
-    const float cosAngle = cosf(centralAngle);
+    float sinAngle, cosAngle;
+    f32math::sincos(centralAngle, sinAngle, cosAngle);
+    float sinBearing, cosBearing;
+    f32math::sincos(bearing, sinBearing, cosBearing);
 
-    float sinLat = sinCenterLat * cosAngle + cosCenterLat * sinAngle * cosf(bearing);
+    float sinLat = sinCenterLat * cosAngle + cosCenterLat * sinAngle * cosBearing;
     if (sinLat > 1.0f) {
         sinLat = 1.0f;
     } else if (sinLat < -1.0f) {
         sinLat = -1.0f;
     }
-    const float lat = asinf(sinLat);
-    const float lon = center.lonRad + atan2f(sinf(bearing) * sinAngle * cosCenterLat, cosAngle - sinCenterLat * sinLat);
+    const float lat = f32math::asin(sinLat);
+    const float lon = center.lonRad + f32math::atan2(sinBearing * sinAngle * cosCenterLat, cosAngle - sinCenterLat * sinLat);
 
     GeoPoint result;
     result.latRad = lat;

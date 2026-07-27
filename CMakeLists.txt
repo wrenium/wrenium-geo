@@ -19,6 +19,16 @@ target_include_directories(wrenium-geo INTERFACE
 
 target_compile_features(wrenium-geo INTERFACE cxx_std_17)
 
+include(FetchContent)
+FetchContent_Declare(
+    wrenium-f32math
+    GIT_REPOSITORY https://github.com/wrenium/wrenium-f32math.git
+    GIT_TAG v0.1.0
+    GIT_SHALLOW TRUE
+)
+FetchContent_MakeAvailable(wrenium-f32math)
+target_link_libraries(wrenium-geo INTERFACE Wrenium::f32math)
+
 # Shared warning flags for this project's own targets (not FetchContent'd
 # third-party code) -- link PRIVATE rather than duplicating the MSVC/else
 # block in every subdirectory's CMakeLists.txt.

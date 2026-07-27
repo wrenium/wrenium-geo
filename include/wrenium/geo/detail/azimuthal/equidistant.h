@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "wrenium/f32math/trig.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/point.h"
 #include "wrenium/geo/projection.h"
@@ -38,9 +39,12 @@ inline Point project(const GeoPoint &rotatedPoint, float scale)
     // North-up, compass convention: bearing 0 (north) -> (0, -radius) (up
     // the screen, since SVG/screen y increases downward); bearing pi/2
     // (east) -> (radius, 0) (right).
+    float sinBearing, cosBearing;
+    f32math::sincos(bearing, sinBearing, cosBearing);
+
     Point projected;
-    projected.x = radius * sinf(bearing);
-    projected.y = -radius * cosf(bearing);
+    projected.x = radius * sinBearing;
+    projected.y = -radius * cosBearing;
     return projected;
 }
 
