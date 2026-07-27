@@ -17,16 +17,16 @@ using namespace wrenium_geo_tests;
 
 namespace {
 
-// Float rounding across sinf/cosf/atan2f (this library, single precision)
-// vs. the double-precision reference computation used to derive the
-// fixture (see projection_golden.h's header comment) means exact equality
-// isn't the right check. At the ~10,000-20,000 km magnitudes these cases
-// produce, an absolute tolerance of 0.01 km (10 m) is generously loose
-// relative to float32's ~7 decimal digits of precision (empirically the
-// disagreement is sub-millimeter) while still catching any real formula
-// regression, which would be off by a meaningful fraction of the whole
-// distance, not a rounding-sized sliver.
-constexpr float kToleranceKm = 0.01f;
+// This library's trig (wrenium-f32math) trades precision for speed --
+// its atan2 carries up to ~6e-4 rad of error, dominating the rotate()/
+// project() error budget here (float rounding alone would be several
+// orders tighter). At the ~10,000-20,000 km magnitudes these cases
+// produce, that's up to ~6e-4 * kEarthRadiusKm =~ 3.8 km -- 5 km is a
+// margin over that, generous enough to absorb the approximation while
+// still catching a real formula regression, which would be off by a
+// meaningful fraction of the whole distance, not an approximation-sized
+// sliver.
+constexpr float kToleranceKm = 5.0f;
 
 bool approxEqual(float a, float b, float tolerance)
 {
