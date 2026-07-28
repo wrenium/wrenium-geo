@@ -338,10 +338,14 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     // ring contributes nothing.
     std::size_t startIdx = 0;
     bool foundInside = false;
+    // Captured here so pass 1 below can reuse it directly instead of
+    // re-deriving it via a second classify() call on the same index --
+    // classify() is a pure function of idx, so that second call always
+    // recomputed the exact same rotateBegin()/rotateFinish() result.
+    GeoPoint startRotated{};
+    bool startHasRotated = false;
     for (std::size_t k = 0; k < pointCount; ++k) {
-        GeoPoint tmpRotated{};
-        bool tmpHasRotated = false;
-        if (classify(k, tmpRotated, tmpHasRotated)) {
+        if (classify(k, startRotated, startHasRotated)) {
             startIdx = k;
             foundInside = true;
             break;
@@ -364,9 +368,9 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     std::size_t excursionCount = 0;
 
     std::size_t prevIdx = startIdx;
-    GeoPoint prevRotated{};
-    bool prevHasRotated = false;
-    bool prevInside = classify(prevIdx, prevRotated, prevHasRotated); // known true
+    GeoPoint prevRotated = startRotated;
+    bool prevHasRotated = startHasRotated;
+    bool prevInside = true; // known true -- already proven by the search loop above
 
     for (std::size_t step = 1; step <= pointCount; ++step) {
         const std::size_t i = (startIdx + step) % pointCount;
