@@ -476,9 +476,16 @@ ApplicationWindow {
             // shows where the rotator is commanded to point while its
             // simulated motor catches up. Drawn first so the wedge sits on
             // top once they coincide.
+            //
+            // Hidden in pan mode: both needles indicate a heading relative
+            // to the map's own center, which stops meaning anything once
+            // dragging moves that center around instead of aiming the
+            // antenna -- see centerCrosshair below for pan mode's own
+            // reference indicator instead.
             Item {
                 id: targetNeedle
                 anchors.fill: parent
+                visible: root.dragAimsAntenna
                 transform: [
                     Rotation {
                         origin.x: 0
@@ -521,6 +528,7 @@ ApplicationWindow {
             Shape {
                 id: headingWedge
                 anchors.fill: parent
+                visible: root.dragAimsAntenna
                 transform: [
                     Rotation {
                         origin.x: 0
@@ -573,6 +581,34 @@ ApplicationWindow {
                         direction: PathArc.Clockwise
                     }
                     PathLine { x: 0; y: 0 }
+                }
+            }
+
+            // Pan mode's own center reference: the heading wedge/target
+            // needle above are hidden while panning (they'd indicate a
+            // heading relative to a center that's now sliding around
+            // underneath them), so a plain crosshair marks the exact point
+            // dragRotate() is actually moving instead.
+            Item {
+                id: centerCrosshair
+                anchors.fill: parent
+                visible: !root.dragAimsAntenna
+
+                Rectangle {
+                    readonly property real armLength: 10
+                    x: mapArea.width / 2 - armLength
+                    y: mapArea.height / 2 - height / 2
+                    width: armLength * 2
+                    height: 1
+                    color: "#e8a33d"
+                }
+                Rectangle {
+                    readonly property real armLength: 10
+                    x: mapArea.width / 2 - width / 2
+                    y: mapArea.height / 2 - armLength
+                    width: 1
+                    height: armLength * 2
+                    color: "#e8a33d"
                 }
             }
 
