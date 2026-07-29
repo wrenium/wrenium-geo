@@ -122,6 +122,17 @@ topojson2bin --mesh countries-110m.json countries borders.bin borders.h
 Exact sign conventions and unit details are documented on `GeoPoint`/`Point`
 themselves -- see the [API documentation](https://wrenium.github.io/wrenium-geo/).
 
+`GeoPoint`'s (latitude, longitude) member order matches the axis order
+[ISO 19111](https://www.iso.org/standard/74039.html)/EPSG:4326 formally
+defines for geographic coordinates -- not the (longitude, latitude) order
+many GIS tools default to for GeoJSON compatibility. Note, though, that
+this library does not model a full ISO 19111 coordinate reference system:
+it assumes a sphere of `kEarthRadiusKm` (Earth's mean radius), not a
+WGS84 (or any other) reference ellipsoid, and has no concept of an EPSG
+code, datum, or CRS transformation pipeline -- appropriate for its actual
+use case (fast, approximate map rendering) but not for surveying-grade or
+interoperable geodesy.
+
 ## Using the library
 
 wrenium-geo is header-only. Either add `include/` to your own include path
