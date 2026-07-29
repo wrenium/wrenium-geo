@@ -3,11 +3,12 @@
 [API documentation](https://wrenium.github.io/wrenium-geo/)
 
 A C++17 header-only geometry library that projects geographic coastline and
-border data onto a 2D plane from an arbitrary center point -- currently via
-azimuthal equidistant projection, with room for other projections later --
-emitting either an SVG path string or a compact binary path stream. Built
-for constrained environments: zero heap allocation, and no exceptions or
-RTTI anywhere in the library.
+border data onto a 2D plane from an arbitrary center point -- via either
+azimuthal equidistant (distance-preserving) or azimuthal orthographic
+("viewed from space") projection, with room for other azimuthal variants
+later -- emitting either an SVG path string or a compact binary path
+stream. Built for constrained environments: zero heap allocation, and no
+exceptions or RTTI anywhere in the library.
 
 ![Example output from examples/azimuthmap](docs/azimuthmap-screenshot.png)
 
@@ -16,9 +17,15 @@ RTTI anywhere in the library.
 - **Produces map geometry centered on any point on Earth**, via a rotate ->
   clip -> project pipeline: rotates the sphere so that center point becomes
   the pole, clips coastline/border data down to a configurable radius
-  around it, then projects what's left with a closed-form azimuthal
-  equidistant formula (true distance and bearing from the center point are
-  preserved exactly).
+  around it, then projects what's left with a closed-form radial-distance
+  formula. Two are built in, selected via `projectRings`/`projectLines`/
+  `projectPoint`'s `ProjectFn` template parameter (defaults to
+  equidistant): **equidistant** (true distance and bearing from the center
+  point are preserved exactly) and **orthographic** (renders as if viewed
+  from infinitely far away -- the disk edge is the horizon; only meaningful
+  up to a 90 degree clip radius). Both share the same rotation step, so
+  adding another azimuthal variant only needs its own radial formula, not a
+  new pipeline.
 - **Fixed-capacity, zero-heap containers** throughout (`Buffer<T, Capacity>`),
   sized entirely at compile time via template parameters -- no
   `std::vector`, no dynamic allocation.
@@ -162,6 +169,18 @@ wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSi
                            coastline.projectedRingSizes().size(), coastline.svgPath);
 
 // coastline.svgPath now holds "M x,y L x,y ... Z" path data, ready to draw.
+```
+
+To use the orthographic projection instead, pass `projectOrthographic` as
+`projectRings`/`projectLines`/`projectPoint`'s `ProjectFn` template
+argument (each call site picks independently, but must agree across a
+single map or the layers won't line up):
+
+```cpp
+#include <wrenium/geo/detail/azimuthal/orthographic.h>
+
+wrenium::geo::projectRings<wrenium::geo::azimuthal::projectOrthographic>(
+    coastline, coastlineInput, center, clipRadiusRad, scale);
 ```
 
 ## Building
