@@ -108,8 +108,14 @@ inline float wrapPi(float value)
 constexpr float kBoundaryArcStepRad = 3.0f * kPi / 180.0f;
 constexpr int kBoundaryArcMaxPoints = 128;
 
+// fromLonRad/toLonRad/direction/clipRadiusRad match this file's existing
+// internal call sites, all of which pass named locals in this exact order;
+// reordering the signature would just move the swap risk to those call
+// sites instead of removing it.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
 template <typename Sink>
 inline Error emitBoundaryArc(float fromLonRad, float toLonRad, int direction, float clipRadiusRad, Sink &&sink, std::size_t &outputCount)
+// NOLINTEND(bugprone-easily-swappable-parameters)
 {
     float delta = toLonRad - fromLonRad;
     if (direction > 0) {

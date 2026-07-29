@@ -67,6 +67,12 @@ inline Error appendFixedFloat(Buffer<char, Capacity> &out, float value)
 
     // Round to the nearest thousandth, expressed as an integer count of
     // thousandths -- avoids ever formatting via repeated float division.
+    // absValue is provably non-negative (just above), so add-0.5-then-
+    // truncate is exact round-half-up; lround() would add a call in this
+    // per-coordinate hot path (this is the SVG/binary emitter's float
+    // formatter) for no correctness benefit over the domain this function
+    // actually sees.
+    // NOLINTNEXTLINE(bugprone-incorrect-roundings)
     const std::uint32_t scaledTotal = static_cast<std::uint32_t>(absValue * static_cast<float>(kScale) + 0.5f);
 
     const std::uint32_t integerPart = scaledTotal / kScale;

@@ -38,7 +38,7 @@ void appendRing(Buffer<std::uint8_t, Capacity> &bytes, const GeoPoint *points, s
 }
 
 template <std::size_t Capacity>
-void writeHeader(Buffer<std::uint8_t, Capacity> &bytes, std::uint32_t magic, std::uint32_t version, std::uint32_t ringCount)
+void writeHeader(Buffer<std::uint8_t, Capacity> &bytes, std::uint32_t magic, std::uint32_t version, std::uint32_t ringCount) // NOLINT(bugprone-easily-swappable-parameters)
 {
     REQUIRE(detail::writeU32LE(bytes, magic) == Error::Ok);
     REQUIRE(detail::writeU32LE(bytes, version) == Error::Ok);

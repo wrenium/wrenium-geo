@@ -145,6 +145,11 @@ inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, 
 /// "viewed from space" variant instead.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
+// clipRadiusRad/scale are documented and always passed in this order
+// across every call site in this codebase (see @param above); every
+// azimuthal projectX function shares it deliberately, so reordering one
+// alone would be its own hazard.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
 template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project, std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
@@ -152,6 +157,7 @@ inline Error projectRings(
     const GeoPoint &center,
     float clipRadiusRad,
     float scale)
+// NOLINTEND(bugprone-easily-swappable-parameters)
 {
     const Buffer<GeoPoint, InputMaxPoints> &inputPoints = input.points;
     const Buffer<std::size_t, InputMaxRings> &inputRingSizes = input.ringSizes;
@@ -311,6 +317,8 @@ inline Error projectRings(
 /// see @ref projectRings()'s identical parameter.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
+// See projectRings's identical parameter pair and NOLINT rationale above.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
 template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project, std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
@@ -318,6 +326,7 @@ inline Error projectLines(
     const GeoPoint &center,
     float clipRadiusRad,
     float scale)
+// NOLINTEND(bugprone-easily-swappable-parameters)
 {
     const Buffer<GeoPoint, InputMaxPoints> &inputPoints = input.points;
     const Buffer<std::size_t, InputMaxRings> &inputRingSizes = input.ringSizes;
@@ -415,8 +424,9 @@ struct ProjectedPoint
 /// same map, or marker positions won't line up. See @ref projectRings()'s
 /// identical parameter.
 /// @return The projected point and its visibility.
+// See projectRings's identical parameter pair and NOLINT rationale above.
 template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project>
-inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &center, float clipRadiusRad, float scale)
+inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &center, float clipRadiusRad, float scale) // NOLINT(bugprone-easily-swappable-parameters)
 {
     ProjectedPoint result;
     result.point = Point{};

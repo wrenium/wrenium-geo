@@ -113,6 +113,28 @@ jobs:
           files=$(find . -name "*.h" -o -name "*.cpp")
           clang-format --dry-run --Werror $files
 
+  static-analysis:
+    # bugprone-*/cert-* only -- see .clang-tidy's own comment for why the
+    # broader cppcoreguidelines-*/performance-*/portability-* sets aren't
+    # used here (mostly conflict with this library's deliberate design).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install clang-tidy
+        run: pip install --break-system-packages clang-tidy
+
+      - name: Configure (with compile_commands.json)
+        run: cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build tests (generates all headers clang-tidy needs)
+        run: cmake --build build --target tests
+
+      - name: Run clang-tidy
+        run: |
+          files=$(find tests -name "*.cpp")
+          clang-tidy -p build $files
+
   reuse:
     # Enforces REUSE Specification (https://reuse.software/) compliance --
     # every tracked file must have clear copyright/license info, either an

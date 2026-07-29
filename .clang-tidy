@@ -1,0 +1,13 @@
+---
+# Scope kept deliberately narrow: bugprone-*/cert-* have a good
+# signal-to-noise ratio for this codebase (verified by running the full
+# cppcoreguidelines-*/performance-*/portability-* sets and finding they
+# mostly conflict with this library's own deliberate constraints --
+# zero-heap, no exceptions/RTTI, no GSL dependency, and an already-made
+# #pragma once decision -- rather than finding real issues).
+Checks: >
+  -*,
+  bugprone-*,
+  cert-*
+WarningsAsErrors: '*'
+HeaderFilterRegex: 'include/wrenium/geo/.*'

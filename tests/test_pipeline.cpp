@@ -41,7 +41,7 @@ GeoPoint destinationPoint(const GeoPoint &center, float distanceRad, float beari
 // loadInputGeometry, which computes this automatically), so this fills in
 // the same bound by hand.
 template <std::size_t N, std::size_t M>
-void pushSingleRingLatBounds(const Buffer<GeoPoint, N> &points, Buffer<float, M> &outMinLat, Buffer<float, M> &outMaxLat)
+void pushSingleRingLatBounds(const Buffer<GeoPoint, N> &points, Buffer<float, M> &outMinLat, Buffer<float, M> &outMaxLat) // NOLINT(bugprone-easily-swappable-parameters)
 {
     float minLat = points[0].latRad;
     float maxLat = minLat;
