@@ -34,17 +34,20 @@ ctest --test-dir build --output-on-failure
 - `include/wrenium/geo/detail/` is implementation-only (excluded from
   Doxygen). Anything a caller must name to call a public function
   belongs outside `detail/`, fully documented.
-- `include/wrenium/geo/` must never mention Qt, QML, or MCU-specific
-  examples -- it has non-Qt, non-embedded consumers too. `common/`,
-  `examples/`, `demos/` are Qt-specific and may reference Qt freely.
-- Keep sibling names symmetric: `computeCoastlineSvgPath` /
-  `computeBorderSvgPath`, not `computeSvgPath` / `computeBorderSvgPath`
-  -- an unqualified name next to a qualified one misreads as "the
-  general case."
-- Comments describe the code as it is: no narrating what it "used to"
-  look like, no stating what's already obvious from the file's
-  location (e.g. "not part of the library" inside `demos/`), no
-  self-references to "this repository" or CI.
+- `include/wrenium/geo/` may only contain MIT (or equivalent
+  permissive) code -- no GPL/LGPL, no copyleft.
+
+## Commits, versions, and tags
+
+- Subject: imperative, capitalized, no trailing period. Body (if any):
+  as short as the reason warrants, up to ~5 lines, explaining *why*,
+  not *what*/*how* -- the diff and CI already show those. Whole
+  message (subject + body) aim for ~480 characters, 600 max -- a hard
+  cap against runaway multi-paragraph essays. Mechanical commits
+  (version bumps, pure renames) can be subject-only.
+- Don't reference files outside this repo (private notes, another
+  project's docs) from commit messages, comments, or docs.
+- Tag immediately after every version bump -- don't defer it.
 
 ## Doxygen
 
