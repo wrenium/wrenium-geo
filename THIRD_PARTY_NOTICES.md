@@ -85,8 +85,11 @@ linking:
 - Users are free to substitute a different (e.g. modified) build of Qt and
   relink any of these apps against it, as normal dynamic linking allows.
 - The complete LGPLv3 license text (which incorporates the GNU GPLv3 by
-  reference) is included at `licenses/LGPL-3.0.txt` and
-  `licenses/GPL-3.0.txt`.
+  reference) is included at `third_party_licenses/LGPL-3.0-only.txt` and
+  `third_party_licenses/GPL-3.0-only.txt` -- kept outside `LICENSES/`
+  since that REUSE-specified directory is for licenses that tag files in
+  this repository, and no file here is itself GPL/LGPL-licensed (Qt is
+  linked dynamically at build time, never vendored).
 
     Qt
     Copyright (C) The Qt Company Ltd. and other contributors

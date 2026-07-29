@@ -113,6 +113,20 @@ jobs:
           files=$(find . -name "*.h" -o -name "*.cpp")
           clang-format --dry-run --Werror $files
 
+  reuse:
+    # Enforces REUSE Specification (https://reuse.software/) compliance --
+    # every tracked file must have clear copyright/license info, either an
+    # inline SPDX tag or a REUSE.toml entry.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install reuse
+        run: pip install --break-system-packages reuse
+
+      - name: Check REUSE compliance
+        run: reuse lint
+
   docs:
     runs-on: ubuntu-latest
     steps:

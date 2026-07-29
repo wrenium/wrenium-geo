@@ -1,0 +1,56 @@
+version = 1
+SPDX-PackageName = "wrenium-geo"
+SPDX-PackageSupplier = "Tommi Tauriainen"
+SPDX-PackageDownloadLocation = "https://github.com/wrenium/wrenium-geo"
+
+# Project docs and plain config files where an inline license header would
+# be pure noise relative to their content (e.g. .gitignore).
+[[annotations]]
+path = [
+    "README.md",
+    "CONTRIBUTING.md",
+    "AGENTS.md",
+    "THIRD_PARTY_NOTICES.md",
+    ".clang-format",
+    ".gitignore",
+    ".github/workflows/ci.yml",
+    "Doxyfile",
+]
+SPDX-FileCopyrightText = "2026 Tommi Tauriainen"
+SPDX-License-Identifier = "MIT"
+
+# Generated screenshot -- binary, can't carry an inline header.
+[[annotations]]
+path = "docs/azimuthmap-screenshot.png"
+SPDX-FileCopyrightText = "2026 Tommi Tauriainen"
+SPDX-License-Identifier = "MIT"
+
+# world-atlas TopoJSON source data (converter test fixtures / reference
+# input) -- see THIRD_PARTY_NOTICES.md. Not editable with an inline header
+# without corrupting the data format.
+[[annotations]]
+path = [
+    "tools/wrenium_geo_convert/data/land-110m.json",
+    "tools/wrenium_geo_convert/data/countries-110m.json",
+]
+SPDX-FileCopyrightText = "2013-2019 Michael Bostock"
+SPDX-License-Identifier = "ISC"
+
+# Reference copies of the GPL/LGPL license text itself (kept for Qt's
+# LGPLv3 dynamic-linking disclosure -- see THIRD_PARTY_NOTICES.md; not
+# under LICENSES/ since no file in this repo is GPL/LGPL-licensed). The
+# license documents explicitly permit verbatim copying of themselves, and
+# the FSF holds their copyright.
+[[annotations]]
+path = [
+    "third_party_licenses/GPL-3.0-only.txt",
+]
+SPDX-FileCopyrightText = "Free Software Foundation, Inc."
+SPDX-License-Identifier = "GPL-3.0-only"
+
+[[annotations]]
+path = [
+    "third_party_licenses/LGPL-3.0-only.txt",
+]
+SPDX-FileCopyrightText = "Free Software Foundation, Inc."
+SPDX-License-Identifier = "LGPL-3.0-only"
