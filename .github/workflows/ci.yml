@@ -40,6 +40,29 @@ jobs:
       - name: Run tests
         run: ctest --test-dir build --output-on-failure -C Release -R '^tests$'
 
+  sanitizers:
+    # ASan+UBSan on the test suite -- catches memory-safety/UB bugs the
+    # plain library-tests job can't. These flags are set here at the CI
+    # invocation level only, never in the project's own CMakeLists.txt --
+    # compiler flags are the consuming project's choice, not this
+    # library's, same as every other build-flag finding this project has
+    # deliberately kept out of its own build config.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (ASan+UBSan)
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=all -g -O1" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+
+      - name: Build tests
+        run: cmake --build build --target tests
+
+      - name: Run tests under sanitizers
+        run: ctest --test-dir build --output-on-failure -R '^tests$'
+
   converter:
     runs-on: ubuntu-latest
     steps:

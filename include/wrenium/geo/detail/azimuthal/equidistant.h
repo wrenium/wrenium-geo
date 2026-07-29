@@ -3,8 +3,6 @@
 
 #pragma once
 
-#include <cmath>
-
 #include "wrenium/f32math/trig.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/point.h"
