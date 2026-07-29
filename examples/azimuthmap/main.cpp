@@ -17,10 +17,12 @@ int main(int argc, char *argv[])
     QCommandLineOption lonOption("lon", "Initial center longitude (degrees)", "lon", "0.0");
     QCommandLineOption rangeOption("range", "Initial range / clip radius (km)", "range", "8000");
     QCommandLineOption screenshotOption("screenshot", "Render once, save a PNG to this path, then exit", "path");
+    QCommandLineOption orthographicOption("orthographic", "Use the orthographic projection instead of the default equidistant");
     parser.addOption(latOption);
     parser.addOption(lonOption);
     parser.addOption(rangeOption);
     parser.addOption(screenshotOption);
+    parser.addOption(orthographicOption);
     parser.process(app);
 
     QQmlApplicationEngine engine;
@@ -29,6 +31,7 @@ int main(int argc, char *argv[])
         {"initialLon", parser.value(lonOption).toDouble()},
         {"initialRange", parser.value(rangeOption).toDouble()},
         {"screenshotPath", parser.value(screenshotOption)},
+        {"orthographic", parser.isSet(orthographicOption)},
     });
     QObject::connect(
         &engine,

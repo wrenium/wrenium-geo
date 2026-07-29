@@ -36,7 +36,16 @@ public:
     // viewport, or an empty string if the pipeline reports an Error (e.g.
     // clipRadiusKm/viewportRadiusPx <= 0, or -- should never happen with
     // the checked-in data -- a capacity overflow).
-    Q_INVOKABLE QString computeCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter);
+    //
+    // useOrthographic picks the radial-distance formula (pipeline.h's
+    // ProjectFn template parameter) at the call level -- equidistant
+    // (default, false) or orthographic (true, detail/azimuthal/
+    // orthographic.h). Each maps to its own fully-specialized projectRings
+    // instantiation with the formula inlined, so this is one branch per
+    // call, not per point -- the hot per-point loop itself has no runtime
+    // indirection either way. Defaults to false so existing callers that
+    // don't pass it keep their current (equidistant) behavior unchanged.
+    Q_INVOKABLE QString computeCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, bool useOrthographic = false);
 
     // Exposes wrenium::geo::kEarthRadiusKm (projection.h) so QML's drag-to-rotate
     // math (Main.qml) can invert the exact same scale formula
@@ -51,8 +60,10 @@ public:
     // from the coastline path above, by design: border data is optional
     // (the caller can simply never call this) and has no inside/outside
     // fill-rule concerns at all. Returns an empty string on the same error
-    // conditions as computeCoastlineSvgPath.
-    Q_INVOKABLE QString computeBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter);
+    // conditions as computeCoastlineSvgPath. useOrthographic: see
+    // computeCoastlineSvgPath's identical parameter -- must match whatever
+    // was passed there for the same map, or the two layers won't line up.
+    Q_INVOKABLE QString computeBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, bool useOrthographic = false);
 
     // Projects an arbitrary point (e.g. a station marker or waypoint --
     // not part of either coastline/border dataset) into the exact same
@@ -65,7 +76,10 @@ public:
     // current clip circle) -- a plain QVariantList rather than a
     // QVariantMap, since this is called once per marker on every recompute
     // and a QVariantList is cheaper to construct for a fixed 3-field shape.
-    Q_INVOKABLE QVariantList projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx) const;
+    // useOrthographic: see computeCoastlineSvgPath's identical parameter --
+    // must match whatever was passed there for the same map, or a marker
+    // placed via this method won't line up with the map underneath it.
+    Q_INVOKABLE QVariantList projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useOrthographic = false) const;
 
 private:
     static constexpr std::size_t kMaxPoints = 6000; // real data is 4997 points

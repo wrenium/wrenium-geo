@@ -11,7 +11,12 @@ import wrenium_geo_qt_bridge
 ApplicationWindow {
     id: root
 
-    width: 900
+    // Auto-fits the toolbar's actual content width instead of a hardcoded
+    // guess -- so adding/removing a toolbar control (like the projection
+    // toggle) can never silently overflow the window again. The 700 floor
+    // just keeps the map area itself from being squeezed too small when
+    // the toolbar alone would fit narrower.
+    width: Math.max(700, toolbarRow.implicitWidth + captureArea.anchors.margins * 2)
     height: 760
     visible: true
     title: qsTr("wrenium-geo Azimuth Map")
@@ -27,6 +32,18 @@ ApplicationWindow {
     property real rangeKm: initialRange
     property string currentCoastlineSvgPath: ""
     property string currentBorderSvgPath: ""
+    // Selects the radial-distance formula (WreniumGeoBridge's
+    // useOrthographic parameter): equidistant (false, distance-preserving
+    // range rings) or orthographic (true, "viewed from space" -- the disk
+    // edge is the horizon).
+    property bool orthographic: false
+    // Orthographic only makes geometric sense up to the horizon
+    // (centralAngle == 90 deg); beyond that it folds back on itself.
+    // rangeKm can be set well past that (up to the antipode, 20020 km,
+    // which is meaningful for equidistant) so clamp only what's actually
+    // sent to the projection, not the slider/field itself.
+    readonly property real horizonKm: wreniumGeoBridge.earthRadiusKm() * Math.PI / 2
+    readonly property real effectiveRangeKm: orthographic ? Math.min(rangeKm, horizonKm) : rangeKm
 
     WreniumGeoBridge {
         id: wreniumGeoBridge
@@ -35,9 +52,9 @@ ApplicationWindow {
     function recomputePath() {
         const viewportRadiusPx = Math.min(mapArea.width, mapArea.height) / 2
         currentCoastlineSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
-            centerLatDeg, centerLonDeg, rangeKm, viewportRadiusPx, false)
+            centerLatDeg, centerLonDeg, effectiveRangeKm, viewportRadiusPx, false, orthographic)
         currentBorderSvgPath = wreniumGeoBridge.computeBorderSvgPath(
-            centerLatDeg, centerLonDeg, rangeKm, viewportRadiusPx, false)
+            centerLatDeg, centerLonDeg, effectiveRangeKm, viewportRadiusPx, false, orthographic)
     }
 
     property double _lastRecomputeMs: 0
@@ -133,6 +150,7 @@ ApplicationWindow {
         spacing: 12
 
         RowLayout {
+            id: toolbarRow
             Layout.fillWidth: true
             spacing: 10
 
@@ -168,6 +186,17 @@ ApplicationWindow {
                 }
             }
 
+            Button {
+                id: projectionButton
+                checkable: true
+                checked: root.orthographic
+                text: checked ? qsTr("Orthographic") : qsTr("Equidistant")
+                onToggled: {
+                    root.orthographic = checked
+                    root.recomputePath()
+                }
+            }
+
             Item { Layout.fillWidth: true }
 
             TextField {
@@ -185,10 +214,17 @@ ApplicationWindow {
             Layout.fillWidth: true
             color: "#8a97a6"
             font.pixelSize: 11
-            text: qsTr("center=(%1, %2) deg  range=%3 km")
-                .arg(root.centerLatDeg.toFixed(4))
-                .arg(root.centerLonDeg.toFixed(4))
-                .arg(root.rangeKm.toFixed(0))
+            text: root.orthographic && root.rangeKm > root.horizonKm
+                ? qsTr("center=(%1, %2) deg  range=%3 km  projection=orthographic (clamped to horizon %4 km)")
+                    .arg(root.centerLatDeg.toFixed(4))
+                    .arg(root.centerLonDeg.toFixed(4))
+                    .arg(root.rangeKm.toFixed(0))
+                    .arg(root.horizonKm.toFixed(0))
+                : qsTr("center=(%1, %2) deg  range=%3 km  projection=%4")
+                    .arg(root.centerLatDeg.toFixed(4))
+                    .arg(root.centerLonDeg.toFixed(4))
+                    .arg(root.rangeKm.toFixed(0))
+                    .arg(root.orthographic ? qsTr("orthographic") : qsTr("equidistant"))
         }
 
         Item {
