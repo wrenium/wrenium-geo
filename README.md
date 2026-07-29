@@ -53,6 +53,13 @@ Full definitions live with the types/functions that use them -- see the
 [API documentation](https://wrenium.github.io/wrenium-geo/) (`input_format.h`
 for ring, `svg_emitter.h`/`binary_emitter.h` for run).
 
+For readers coming from GIS tooling: a **ring** here corresponds to an
+[OGC Simple Feature Access](https://www.ogc.org/standards/sfa/) (ISO 19125-1)
+`LinearRing` -- the boundary of a `Polygon` -- and a **run** corresponds to
+an open `LineString`. wrenium-geo doesn't implement SFA's actual type
+hierarchy, WKT/WKB encoding, or SQL binding (ISO 19125-2) -- these are just
+the closest standard vocabulary for what `Ring`/`Run` already mean here.
+
 ## Repository layout
 
 ```
