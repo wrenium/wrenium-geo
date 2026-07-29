@@ -9,6 +9,7 @@
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/detail/azimuthal/clip.h"
 #include "wrenium/geo/detail/azimuthal/equidistant.h"
+#include "wrenium/geo/detail/azimuthal/orthographic.h"
 #include "wrenium/geo/detail/byte_stream.h"
 #include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
@@ -138,9 +139,13 @@ inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, 
 /// whatever "zoom preset" unit the caller's own code uses, for example
 /// `clipRadiusKm / kEarthRadiusKm`.
 /// @param scale Output units per kilometer.
+/// @tparam ProjectFn Radial-distance formula applied after rotate/clip --
+/// defaults to azimuthal::project (equidistant.h); pass
+/// azimuthal::projectOrthographic (orthographic.h) for the horizon-limited
+/// "viewed from space" variant instead.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
-template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project, std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
@@ -284,7 +289,7 @@ inline Error projectRings(
     // ---- project: stageB in place (GeoPoint .geo -> Point .point) ----
     for (std::size_t i = 0; i < workspace.stageB.size(); ++i) {
         const GeoPoint rotatedClipped = workspace.stageB[i].geo;
-        workspace.stageB[i].point = azimuthal::project(rotatedClipped, scale);
+        workspace.stageB[i].point = ProjectFn(rotatedClipped, scale);
     }
 
     return Error::Ok;
@@ -302,9 +307,11 @@ inline Error projectRings(
 /// @param center The projection center (lat/lon, radians).
 /// @param clipRadiusRad Clip radius in radians (angular).
 /// @param scale Output units per kilometer.
+/// @tparam ProjectFn Radial-distance formula applied after rotate/clip --
+/// see @ref projectRings()'s identical parameter.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
-template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project, std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
@@ -375,7 +382,7 @@ inline Error projectLines(
     // ---- project: stageB in place (GeoPoint .geo -> Point .point) ----
     for (std::size_t i = 0; i < workspace.stageB.size(); ++i) {
         const GeoPoint rotatedClipped = workspace.stageB[i].geo;
-        workspace.stageB[i].point = azimuthal::project(rotatedClipped, scale);
+        workspace.stageB[i].point = ProjectFn(rotatedClipped, scale);
     }
 
     return Error::Ok;
@@ -403,7 +410,12 @@ struct ProjectedPoint
 /// @param center The projection center (lat/lon, radians).
 /// @param clipRadiusRad Clip radius in radians (angular).
 /// @param scale Output units per kilometer.
+/// @tparam ProjectFn Radial-distance formula applied after rotate/clip --
+/// must match whatever @ref projectRings() / @ref projectLines() call was used for the
+/// same map, or marker positions won't line up. See @ref projectRings()'s
+/// identical parameter.
 /// @return The projected point and its visibility.
+template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project>
 inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &center, float clipRadiusRad, float scale)
 {
     ProjectedPoint result;
@@ -421,7 +433,7 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
     }
 
     result.visible = true;
-    result.point = azimuthal::project(rotated, scale);
+    result.point = ProjectFn(rotated, scale);
     return result;
 }
 

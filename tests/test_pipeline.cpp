@@ -188,3 +188,21 @@ TEST_CASE("projectPoint: a point exactly on the clip boundary counts as visible"
 
     CHECK(result.visible);
 }
+
+TEST_CASE("projectPoint: an explicit ProjectFn selects a different radial-distance formula than the default")
+{
+    const GeoPoint center{0.3f, 0.5f};
+    const float clipRadiusRad = 20.0f * kPi / 180.0f;
+    const float scale = 2.0f;
+    const GeoPoint markerRaw = destinationPoint(center, 10.0f * kPi / 180.0f, 0.7f);
+
+    const ProjectedPoint equidistantResult = projectPoint(markerRaw, center, clipRadiusRad, scale);
+    const ProjectedPoint orthographicResult = projectPoint<azimuthal::projectOrthographic>(markerRaw, center, clipRadiusRad, scale);
+
+    REQUIRE(equidistantResult.visible);
+    REQUIRE(orthographicResult.visible);
+    // Both formulas agree at the center (already covered above) but diverge
+    // away from it -- confirms the template parameter actually took effect
+    // rather than silently falling back to the default.
+    CHECK(orthographicResult.point.x != doctest::Approx(equidistantResult.point.x).epsilon(1e-4));
+}
