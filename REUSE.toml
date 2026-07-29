@@ -11,7 +11,6 @@ path = [
     "CONTRIBUTING.md",
     "AGENTS.md",
     "THIRD_PARTY_NOTICES.md",
-    "CHANGELOG.md",
     "SECURITY.md",
     ".clang-format",
     ".clang-tidy",

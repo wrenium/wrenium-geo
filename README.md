@@ -237,10 +237,9 @@ doxygen Doxyfile                        # API reference: docs/api/html/index.htm
 
 ## Versioning
 
-Releases follow [Semantic Versioning](https://semver.org/); see
-<a href="CHANGELOG.md">CHANGELOG.md</a> (format: [Keep a
-Changelog](https://keepachangelog.com/en/1.1.0/)) for what changed in each
-one.
+Releases follow [Semantic Versioning](https://semver.org/) -- see the
+repository's tags and [releases](https://github.com/wrenium/wrenium-geo/releases)
+for what changed in each one.
 
 ## License
 
