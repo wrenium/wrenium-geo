@@ -1,5 +1,8 @@
 # wrenium-geo
 
+[![CI](https://github.com/wrenium/wrenium-geo/actions/workflows/ci.yml/badge.svg)](https://github.com/wrenium/wrenium-geo/actions/workflows/ci.yml)
+[![REUSE status](https://api.reuse.software/badge/github.com/wrenium/wrenium-geo)](https://api.reuse.software/info/github.com/wrenium/wrenium-geo)
+
 [API documentation](https://wrenium.github.io/wrenium-geo/)
 
 A C++17 header-only geometry library that projects geographic coastline and
@@ -231,6 +234,13 @@ cmake --build build --target demos      # builds rotator + radar
 
 doxygen Doxyfile                        # API reference: docs/api/html/index.html
 ```
+
+## Versioning
+
+Releases follow [Semantic Versioning](https://semver.org/); see
+<a href="CHANGELOG.md">CHANGELOG.md</a> (format: [Keep a
+Changelog](https://keepachangelog.com/en/1.1.0/)) for what changed in each
+one.
 
 ## License
 
