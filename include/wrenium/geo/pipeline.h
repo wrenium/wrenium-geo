@@ -391,8 +391,8 @@ inline Error projectLines(
 /// A single projected point and whether it fell inside the clip circle.
 struct ProjectedPoint
 {
-    Point point;  ///< Valid only when #visible is true.
-    bool visible; ///< True iff the input point lies within the clip circle.
+    Point point;          ///< Valid only when #visible is true.
+    bool visible = false; ///< True iff the input point lies within the clip circle.
 };
 
 /// Projects one arbitrary point (a station marker or waypoint, for
