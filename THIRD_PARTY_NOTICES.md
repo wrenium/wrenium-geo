@@ -71,9 +71,9 @@ Fetched at configure time (CMake FetchContent, tag v3.11.3), not vendored.
     Copyright (c) 2013-2022 Niels Lohmann
     MIT License -- https://github.com/nlohmann/json
 
-## Qt (examples/azimuthmap, demos/rotator, demos/radar -- dynamically linked, LGPLv3)
+## Qt (examples/azimuthmap, examples/mercatormap, demos/rotator, demos/radar -- dynamically linked, LGPLv3)
 
-These three apps link dynamically against Qt (QtQuick, QtQuick.Controls,
+These apps link dynamically against Qt (QtQuick, QtQuick.Controls,
 QtQuick.Layouts, QtQuick.Shapes), used unmodified under the GNU Lesser
 General Public License v3.0. Per the LGPLv3's obligations for dynamic
 linking:

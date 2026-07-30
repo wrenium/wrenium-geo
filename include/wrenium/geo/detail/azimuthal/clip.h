@@ -8,6 +8,7 @@
 
 #include "wrenium/f32math/asin.h"
 #include "wrenium/geo/buffer.h"
+#include "wrenium/geo/detail/angle.h"
 #include "wrenium/geo/detail/azimuthal/rotation.h"
 #include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
@@ -83,20 +84,6 @@ inline GeoPoint clipBoundaryCrossing(const GeoPoint &outside, const GeoPoint &in
 inline bool isCheaplyOutside(const GeoPoint &rawPoint, const GeoPoint &center, float clipRadiusRad)
 {
     return std::fabs(rawPoint.latRad - center.latRad) > clipRadiusRad;
-}
-
-// Shared by clipRingToSink's excursion-enclosure accumulator and
-// isCenterEnclosedByRings (clip.h, further down) -- both need the same
-// "wrap to within (-pi, pi]" operation on plain longitude/bearing deltas.
-inline float wrapPi(float value)
-{
-    while (value > kPi) {
-        value -= 2.0f * kPi;
-    }
-    while (value <= -kPi) {
-        value += 2.0f * kPi;
-    }
-    return value;
 }
 
 // Traces the clip circle's own boundary between two bearings, one point
@@ -490,7 +477,7 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
         clipPrev[cur] = clipOrder[(k + N - 1) % N];
     }
 
-    using detail::wrapPi;
+    using wrenium::geo::detail::wrapPi;
 
     // Reference point for seeding the entry/exit alternation below, plus
     // which sorted interval (refK) it falls in. Deliberately *not* a fixed
@@ -848,7 +835,7 @@ inline Error clipLineToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
 template <std::size_t MaxRings>
 inline bool isCenterEnclosedByRings(const GeoPoint *rawPoints, const Buffer<std::size_t, MaxRings> &ringSizes, const GeoPoint &center)
 {
-    using detail::wrapPi;
+    using wrenium::geo::detail::wrapPi;
 
     bool inside = false;
     std::size_t offset = 0;

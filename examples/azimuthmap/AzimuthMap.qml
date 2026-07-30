@@ -158,21 +158,28 @@ ApplicationWindow {
             TextField {
                 id: latField
                 Layout.preferredWidth: 90
-                validator: DoubleValidator { bottom: -90; top: 90 }
+                // locale: "C" forces "." as the decimal point regardless of
+                // the system locale (e.g. Finnish, which uses ","): without
+                // it, DoubleValidator both rejects "." and accepts "," --
+                // but the field is read with plain JS parseFloat()
+                // (goButton.onClicked below), which always expects "." and
+                // silently truncates at a "," (parseFloat("20,015") is 20,
+                // not 20015) -- see MercatorMap.qml's identical fix.
+                validator: DoubleValidator { bottom: -90; top: 90; locale: "C" }
                 onAccepted: goButton.clicked()
             }
             Label { text: qsTr("Lon"); color: "#c7d0da" }
             TextField {
                 id: lonField
                 Layout.preferredWidth: 90
-                validator: DoubleValidator { bottom: -180; top: 180 }
+                validator: DoubleValidator { bottom: -180; top: 180; locale: "C" }
                 onAccepted: goButton.clicked()
             }
             Label { text: qsTr("Range (km)"); color: "#c7d0da" }
             TextField {
                 id: rangeField
                 Layout.preferredWidth: 90
-                validator: DoubleValidator { bottom: 1; top: 20020 }
+                validator: DoubleValidator { bottom: 1; top: 20020; locale: "C" }
                 onAccepted: goButton.clicked()
             }
             Button {

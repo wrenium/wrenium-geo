@@ -69,8 +69,9 @@ if(PROJECT_IS_TOP_LEVEL)
         add_subdirectory(common/wrenium_geo_qt_bridge)
 
         add_subdirectory(examples/azimuthmap)
+        add_subdirectory(examples/mercatormap)
         add_custom_target(examples)
-        add_dependencies(examples azimuthmap)
+        add_dependencies(examples azimuthmap mercatormap)
 
         add_subdirectory(demos/rotator)
         add_subdirectory(demos/radar)

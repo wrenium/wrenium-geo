@@ -54,6 +54,15 @@ public:
     // library's own value.
     Q_INVOKABLE double earthRadiusKm() const;
 
+    // Exposes cylindrical::kMercatorMaxLatRad (mercator.h), in degrees, so
+    // examples/mercatormap can clamp centerLatDeg to it after drag/zoom
+    // updates -- same reasoning as earthRadiusKm() above. Necessary, not
+    // just tidy: past this latitude, project()'s own clamp collapses
+    // every point beyond it to the same y, so an unclamped center can
+    // drift into a dead zone where the map stops visibly responding to
+    // further panning in that direction.
+    Q_INVOKABLE double mercatorMaxLatDeg() const;
+
     // Border-line counterpart to computeCoastlineSvgPath, for country border
     // segments (data/world_borders_110m.h, see clipLineToSink/
     // projectLines) -- a fully separate pipeline call and output buffer
@@ -80,6 +89,68 @@ public:
     // must match whatever was passed there for the same map, or a marker
     // placed via this method won't line up with the map underneath it.
     Q_INVOKABLE QVariantList projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useOrthographic = false) const;
+
+    // Mercator counterpart to computeCoastlineSvgPath -- a fully separate
+    // pipeline (cylindrical::projectRingsMercator, cylindrical_pipeline.h),
+    // not a useOrthographic-style flag on the azimuthal methods above: no
+    // clip radius, no rotation, a rectangular map instead of a disc. Reuses
+    // the already-loaded m_input (raw GeoPoint rings, projection-agnostic)
+    // and m_workspace (safe: never called in the same recompute as
+    // computeCoastlineSvgPath, and every pipeline call fully overwrites
+    // whatever was in it). halfWidthKm/viewportWidthPx together give scale
+    // (output units per km) the same way clipRadiusKm/viewportRadiusPx give
+    // it above, just width- instead of radius-based, matching how a
+    // rectangular map's "zoom level" is naturally expressed.
+    //
+    // viewportHeightPx also feeds projectRingsMercator's own
+    // clipLatRad/clipLonRad -- a whole ring that's provably outside the
+    // visible window skips projection entirely, a real, measured
+    // performance win on constrained targets (see cylindrical_pipeline.h's
+    // own comment). Both derived the same simple (linear, not exact)
+    // way -- see that comment for why that's safe, not just convenient.
+    Q_INVOKABLE QString computeMercatorCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter);
+
+    // Border-line counterpart, mirroring computeMercatorCoastlineSvgPath /
+    // computeBorderSvgPath's own relationship. Reuses m_borderInput/
+    // m_borderWorkspace for the same reason as above.
+    Q_INVOKABLE QString computeMercatorBorderSvgPath(double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter);
+
+    // Inverse of the Mercator forward projection (cylindrical::unproject,
+    // mercator.h): given a planar point in the same coordinate space
+    // computeMercatorCoastlineSvgPath()'s output uses (0, 0) at center),
+    // returns [latDeg, lonDeg]. Used by examples/mercatormap for both
+    // drag-to-pan (grab the geo point under the cursor on press) and
+    // scroll-to-zoom-toward-cursor (grab the point under the cursor before
+    // changing scale) -- see MercatorMap.qml.
+    Q_INVOKABLE QVariantList unprojectMercatorPoint(double pointX, double pointY, double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx) const;
+
+    // Given a known geo point (anchorLatDeg/anchorLonDeg) and the screen
+    // position it should appear at (pointX/pointY, same coordinate space
+    // as unprojectMercatorPoint's own parameter), returns the center that
+    // makes that true -- the shared building block behind both drag-to-pan
+    // (same halfWidthKm, a moving screen position) and
+    // scroll-to-zoom-toward-cursor (same screen position, a new
+    // halfWidthKm) in examples/mercatormap.
+    //
+    // Implemented as cylindrical::unproject(Point{-pointX, -pointY}, anchor,
+    // scale): project()'s x is antisymmetric under swapping point<->center
+    // (exact except at the precise antimeridian boundary, irrelevant for
+    // interactive use) and its y is exactly antisymmetric under that same
+    // swap (a plain subtraction, no boundary case at all) -- so "what
+    // center puts anchor at (pointX, pointY)" is exactly
+    // unproject(-(pointX, pointY), anchor, scale). Verified directly (not
+    // just derived by hand) in wrenium-geo's own test_mercator.cpp.
+    Q_INVOKABLE QVariantList recenterKeepingPointFixed(double pointX, double pointY, double anchorLatDeg, double anchorLonDeg, double halfWidthKm, double viewportWidthPx) const;
+
+    // Exposes cylindrical::clampCenterLatForViewport (mercator.h): unlike
+    // a flat +-mercatorMaxLatDeg() clamp, this accounts for the current
+    // zoom's own vertical extent, so panning stops once the *viewport's*
+    // edge -- not just the center point -- would cross the map's valid
+    // latitude range. examples/mercatormap uses this instead of a flat
+    // clamp after every drag/zoom/typed-latitude update; see that
+    // function's own comment for the dead-space bug a flat clamp causes
+    // at wide zooms.
+    Q_INVOKABLE double clampMercatorCenterLatDeg(double latDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx) const;
 
 private:
     static constexpr std::size_t kMaxPoints = 6000; // real data is 4997 points

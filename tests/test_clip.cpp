@@ -604,7 +604,7 @@ TEST_CASE("clip: unrotate recovers the correct longitude when center is exactly 
     // The exact reference point clipRingToSink's anchor fact uses: bearing
     // 0, at the clip radius.
     const GeoPoint rotated{kHalfPi - clipRadiusRad, 0.0f};
-    const GeoPoint raw = detail::unrotate(rotated, center);
+    const GeoPoint raw = azimuthal::detail::unrotate(rotated, center);
 
     // At the north pole, every point at the same central angle shares the
     // same colatitude regardless of bearing.
@@ -634,8 +634,8 @@ TEST_CASE("clip: unrotate stays correct across several bearings at both poles, m
         for (const float bearingDeg : {0.0f, 45.0f, 90.0f, 180.0f, 270.0f}) {
             const GeoPoint rotated{kHalfPi - clipRadiusRad, bearingDeg * degToRad};
 
-            const GeoPoint atPole = detail::unrotate(rotated, centerAtPole);
-            const GeoPoint nearPole = detail::unrotate(rotated, centerNearPole);
+            const GeoPoint atPole = azimuthal::detail::unrotate(rotated, centerAtPole);
+            const GeoPoint nearPole = azimuthal::detail::unrotate(rotated, centerNearPole);
 
             CAPTURE(centerLatDeg);
             CAPTURE(bearingDeg);

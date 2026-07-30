@@ -7,6 +7,7 @@ add_executable(tests
     test_geo_point.cpp
     test_projection.cpp
     test_orthographic.cpp
+    test_mercator.cpp
     test_clip.cpp
     test_pipeline.cpp
     test_input_format.cpp

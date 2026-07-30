@@ -6,12 +6,13 @@
 [API documentation](https://wrenium.github.io/wrenium-geo/)
 
 A C++17 header-only geometry library that projects geographic coastline and
-border data onto a 2D plane from an arbitrary center point -- via either
+border data onto a 2D plane -- either centered on an arbitrary point via
 azimuthal equidistant (distance-preserving) or azimuthal orthographic
 ("viewed from space") projection, with room for other azimuthal variants
-later -- emitting either an SVG path string or a compact binary path
-stream. Built for constrained environments: zero heap allocation, and no
-exceptions or RTTI anywhere in the library.
+later, or as a whole-world Web Mercator map via its own separate pipeline --
+emitting either an SVG path string or a compact binary path stream. Built
+for constrained environments: zero heap allocation, and no exceptions or
+RTTI anywhere in the library.
 
 ![Example output from examples/azimuthmap](docs/azimuthmap-screenshot.png)
 
@@ -29,6 +30,12 @@ exceptions or RTTI anywhere in the library.
   up to a 90 degree clip radius). Both share the same rotation step, so
   adding another azimuthal variant only needs its own radial formula, not a
   new pipeline.
+- **Whole-world Web Mercator**, via a separate pipeline (`projectRingsMercator`/
+  `projectLinesMercator`, `cylindrical_pipeline.h`) -- cylindrical, not
+  azimuthal, so no rotate/clip stage: every point is projected
+  unconditionally, with pole-latitude clamping and antimeridian-crossing
+  splitting (including rings that fully encircle a pole) handled
+  automatically. See the "Mercator" section below.
 - **Fixed-capacity, zero-heap containers** throughout (`Buffer<T, Capacity>`),
   sized entirely at compile time via template parameters -- no
   `std::vector`, no dynamic allocation.
@@ -72,21 +79,23 @@ tests/                       doctest suite
 tools/wrenium_geo_convert/    offline TopoJSON -> input-geometry converter
                              tool (builds as `topojson2bin`)
 common/wrenium_geo_qt_bridge/ shared C++/QML bridge (WreniumGeoBridge) --
-                             used by all three Qt Quick apps below, and
-                             itself the reference example for wrapping the
+                             used by the Qt Quick apps below, and itself
+                             the reference example for wrapping the
                              library as a QML type
 examples/azimuthmap/         minimal Qt Quick integration example (pan/zoom,
                              CLI screenshot mode) showing how to drive
-                             WreniumGeoBridge from an app
+                             WreniumGeoBridge's azimuthal methods from an app
+examples/mercatormap/        same, for WreniumGeoBridge's Web Mercator
+                             methods (drag-to-pan, scroll-to-zoom-toward-
+                             cursor, CLI screenshot mode)
 demos/rotator/               antenna-rotator-controller-style showcase demo
 demos/radar/                 PPI radar scope showcase demo
 ```
 
 `examples/` and `demos/` are kept distinct on purpose: `examples/azimuthmap`
-is a minimal reference for people *integrating* wrenium-geo into their own
-app, while `demos/rotator` and `demos/radar` are full showcase applications
-for people
-*evaluating* it.
+and `examples/mercatormap` are minimal references for people *integrating*
+wrenium-geo into their own app, while `demos/rotator` and `demos/radar` are
+full showcase applications for people *evaluating* it.
 
 ## TopoJSON converter
 
@@ -204,6 +213,37 @@ wrenium::geo::projectRings<wrenium::geo::azimuthal::projectOrthographic>(
     coastline, coastlineInput, center, clipRadiusRad, scale);
 ```
 
+### Mercator
+
+This is **Web Mercator** (spherical, not ellipsoidal -- EPSG:3857-style),
+and it's **not** a `ProjectFn` choice on `projectRings`/`projectLines`: it's
+cylindrical, not azimuthal, so there's no rotate-to-pole step. It has its
+own pipeline, `projectRingsMercator`/`projectLinesMercator`
+(`cylindrical_pipeline.h`). No *exact* per-point clip the way the
+azimuthal family's circular clip radius does (points are never trimmed
+to a boundary) -- but the optional `clipLatRad`/`clipLonRad` parameters
+let a whole ring/run that's provably outside the visible window skip
+projection entirely, a coarse, conservative visibility cull. Every point
+that survives it is projected unconditionally, with latitude silently
+clamped to the standard pole limit (~85.0511 degrees) and any
+antimeridian crossing (including a ring that fully encircles a pole,
+e.g. Antarctica) handled automatically. `center` is a true 2D recenter
+point, same as the azimuthal family's own convention (`project(center,
+center, scale)` is always `(0, 0)`) -- also invertible via
+`cylindrical::unproject()`, for turning a screen click back into a
+GeoPoint (see `examples/mercatormap`):
+
+```cpp
+#include <wrenium/geo/cylindrical_pipeline.h>
+
+const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(0.0f, 0.0f); // only lonRad is used
+const float scale = 0.03f; // output units per km
+
+wrenium::geo::cylindrical::projectRingsMercator(coastline, coastlineInput, center, scale);
+wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
+                           coastline.projectedRingSizes().size(), coastline.svgPath);
+```
+
 ## Building
 
 Requires CMake >= 3.21 and a C++17 compiler. Test/tool dependencies
@@ -219,9 +259,10 @@ cmake --build build
 
 A plain build produces only the `topojson2bin` CLI tool (no Qt needed).
 Everything else -- the test suite, and the Qt Quick apps
-(`examples/azimuthmap`, `demos/rotator`, `demos/radar`, which require Qt >=
-6.8) -- is excluded from the default `all` target so a plain build stays
-fast. Build them by name or via their umbrella targets:
+(`examples/azimuthmap`, `examples/mercatormap`, `demos/rotator`,
+`demos/radar`, which require Qt >= 6.8) -- is excluded from the default
+`all` target so a plain build stays fast. Build them by name or via
+their umbrella targets:
 
 ```sh
 cmake --build build --target tests             # library test suite
@@ -229,7 +270,7 @@ cmake --build build --target topojson2bin_tests # converter test suite
 ctest --test-dir build
 
 cmake -S . -B build -DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.x/gcc_64
-cmake --build build --target examples   # builds azimuthmap
+cmake --build build --target examples   # builds azimuthmap + mercatormap
 cmake --build build --target demos      # builds rotator + radar
 
 doxygen Doxyfile                        # API reference: docs/api/html/index.html
@@ -248,5 +289,5 @@ MIT (see `LICENSE.md`). `detail/azimuthal/clip.h` ports algorithms from
 coastline and border data is derived from
 [world-atlas](https://github.com/topojson/world-atlas) (ISC), ultimately
 from [Natural Earth](https://www.naturalearthdata.com/) (public domain). The
-three Qt Quick apps link Qt dynamically under LGPLv3. See
+Qt Quick apps link Qt dynamically under LGPLv3. See
 `THIRD_PARTY_NOTICES.md` for full attributions.
