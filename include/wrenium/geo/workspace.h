@@ -15,11 +15,12 @@
 /// point buffer as a function-local stack variable risks overflowing a
 /// constrained target's stack.
 ///
-/// After a successful @ref wrenium::geo::projectRings() "projectRings" /
-/// @ref wrenium::geo::projectLines() "projectLines" call (pipeline.h),
-/// read the result back via `svgPath` (SVG text), projectedPoint() (one
-/// point by index), or projectedPoints() + projectedRingSizes() (the raw
-/// projected points, to feed a different emitter for example).
+/// After a successful call to either projection family's own
+/// `projectRings()`/`projectLines()` (azimuthal_pipeline.h,
+/// cylindrical_pipeline.h), read the result back via `svgPath` (SVG
+/// text), projectedPoint() (one point by index), or projectedPoints() +
+/// projectedRingSizes() (the raw projected points, to feed a different
+/// emitter for example).
 
 namespace wrenium::geo {
 
@@ -43,7 +44,7 @@ struct Workspace
 {
     /// @cond WRENIUM_GEO_INTERNAL
     // Clip's working buffer (rotated, then projected in place). Public
-    // only because projectRings()/projectLines() (pipeline.h, free
+    // only because both pipelines' own projectRings()/projectLines() (free
     // functions) need direct access -- use projectedPoint()/
     // projectedPoints()/projectedRingSizes() below to read the result
     // instead. Element type is a union (detail/point_storage.h), not
@@ -53,8 +54,9 @@ struct Workspace
     // instead.
     Buffer<std::size_t, MaxRings> ringSizesB;
 
-    // Scratch cache projectRings() (pipeline.h) hands to clipRingToSink()
-    // (detail/azimuthal/clip.h): each ring's own points, rotated once
+    // Scratch cache azimuthal::projectRings() (azimuthal_pipeline.h)
+    // hands to clipRingToSink() (detail/azimuthal/clip.h): each ring's
+    // own points, rotated once
     // during clip's classification pass and reused for the output-
     // emitting pass instead of being rotated a second time. Reused ring
     // by ring within a single call -- not part of the result, never read
@@ -68,7 +70,8 @@ struct Workspace
     Buffer<char, OutputCharCapacity> svgPath;
 
     /// The final projected point at @p index, valid after a successful
-    /// @ref projectRings() / @ref projectLines() call. @p index ranges over the same
+    /// call to either projection family's own `projectRings()`/
+    /// `projectLines()`. @p index ranges over the same
     /// flattened point list projectedRingSizes() describes -- ring 0's
     /// points first, then ring 1's, and so on.
     Point projectedPoint(std::size_t index) const

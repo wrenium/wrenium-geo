@@ -212,12 +212,12 @@ inline GeoPoint unrotate(const GeoPoint &rotated, const GeoPoint &center)
 
 // Traces the *entire* clip circle boundary (every bearing), not just an arc
 // between an exit and entry -- used by isCenterEnclosedByRings's caller
-// (pipeline.h) for the case where clipping finds zero rings anywhere near
-// the clip circle at all, but the center itself sits inside one of the
-// input rings: with no coastline anywhere in view, the correct visible
-// shape is the entire clip circle. Same 3-degree step / point cap as
-// emitBoundaryArc, so the resulting circle's resolution matches every other
-// clip-circle boundary this library ever draws.
+// (projectRings(), azimuthal_pipeline.h) for the case where clipping finds
+// zero rings anywhere near the clip circle at all, but the center itself
+// sits inside one of the input rings: with no coastline anywhere in view,
+// the correct visible shape is the entire clip circle. Same 3-degree step
+// / point cap as emitBoundaryArc, so the resulting circle's resolution
+// matches every other clip-circle boundary this library ever draws.
 template <typename Sink>
 inline Error emitFullClipCircle(float clipRadiusRad, Sink &&sink, std::size_t &outputCount)
 {
@@ -262,8 +262,9 @@ inline Error emitFullClipCircle(float clipRadiusRad, Sink &&sink, std::size_t &o
 /// clip into more than one disjoint visible piece (e.g. two separate capes
 /// of the same landmass); @p ringBoundary is called once per piece, with
 /// its point count, so a caller that needs each piece as its own separate
-/// ring (pipeline.h does) knows where the boundaries are -- callers that
-/// only want the flattened point sequence (e.g. clipRing()) can ignore it.
+/// ring (projectRings(), azimuthal_pipeline.h, does) knows where the
+/// boundaries are -- callers that only want the flattened point sequence
+/// (e.g. clipRing()) can ignore it.
 ///
 /// Known limitation: a ring where every segment is independently
 /// self-contained (no segment chains to another) can pick the wrong arc

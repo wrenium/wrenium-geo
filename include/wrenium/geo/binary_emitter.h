@@ -111,8 +111,9 @@ private:
 };
 
 /// Border-line counterpart to BinaryPathEmitter: encodes the *open*
-/// polyline run output of @ref projectLines() (pipeline.h) the same way (same
-/// magic/version header, same MoveTo/LineTo tag stream), but never writes a
+/// polyline run output of either projection family's own `projectLines()`
+/// the same way (same magic/version header, same MoveTo/LineTo tag
+/// stream), but never writes a
 /// ClosePath tag after a run -- a border segment has no fill and closing it
 /// would draw a spurious chord back to its own start.
 /// @tparam Commands Command-tag values to write; defaults to PathCommand.

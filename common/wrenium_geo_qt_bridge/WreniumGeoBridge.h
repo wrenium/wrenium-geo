@@ -37,11 +37,12 @@ public:
     // clipRadiusKm/viewportRadiusPx <= 0, or -- should never happen with
     // the checked-in data -- a capacity overflow).
     //
-    // useOrthographic picks the radial-distance formula (pipeline.h's
-    // ProjectFn template parameter) at the call level -- equidistant
-    // (default, false) or orthographic (true, detail/azimuthal/
-    // orthographic.h). Each maps to its own fully-specialized projectRings
-    // instantiation with the formula inlined, so this is one branch per
+    // useOrthographic picks the radial-distance formula
+    // (azimuthal_pipeline.h's ProjectFn template parameter) at the call
+    // level -- equidistant (default, false) or orthographic (true,
+    // detail/azimuthal/orthographic.h). Each maps to its own
+    // fully-specialized azimuthal::projectRings instantiation with the
+    // formula inlined, so this is one branch per
     // call, not per point -- the hot per-point loop itself has no runtime
     // indirection either way. Defaults to false so existing callers that
     // don't pass it keep their current (equidistant) behavior unchanged.
@@ -79,8 +80,9 @@ public:
     // (x, y) coordinate space computeCoastlineSvgPath()/computeBorderSvgPath()'s
     // returned path data uses: (0, 0) at the center, same scale (output
     // units per km). Lets QML place a marker Item on the map without
-    // hand-rolling a second projection formula (wrenium::geo::projectPoint,
-    // pipeline.h). Returns a 3-element list [x, y, visible] (x/y only
+    // hand-rolling a second projection formula
+    // (wrenium::geo::azimuthal::projectPoint, azimuthal_pipeline.h).
+    // Returns a 3-element list [x, y, visible] (x/y only
     // meaningful when visible is true, i.e. the point falls inside the
     // current clip circle) -- a plain QVariantList rather than a
     // QVariantMap, since this is called once per marker on every recompute
@@ -91,7 +93,7 @@ public:
     Q_INVOKABLE QVariantList projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useOrthographic = false) const;
 
     // Mercator counterpart to computeCoastlineSvgPath -- a fully separate
-    // pipeline (cylindrical::projectRingsMercator, cylindrical_pipeline.h),
+    // pipeline (cylindrical::projectRings, cylindrical_pipeline.h),
     // not a useOrthographic-style flag on the azimuthal methods above: no
     // clip radius, no rotation, a rectangular map instead of a disc. Reuses
     // the already-loaded m_input (raw GeoPoint rings, projection-agnostic)
@@ -102,7 +104,7 @@ public:
     // it above, just width- instead of radius-based, matching how a
     // rectangular map's "zoom level" is naturally expressed.
     //
-    // viewportHeightPx also feeds projectRingsMercator's own
+    // viewportHeightPx also feeds cylindrical::projectRings' own
     // clipLatRad/clipLonRad -- a whole ring that's provably outside the
     // visible window skips projection entirely, a real, measured
     // performance win on constrained targets (see cylindrical_pipeline.h's
@@ -173,9 +175,9 @@ private:
 
     wrenium::geo::Workspace<kMaxPoints, kMaxRings> m_workspace;
     // Points plus each ring's own [minLat, maxLat], loaded once by
-    // loadInputGeometry (pipeline.h) instead of rescanned by projectRings
-    // on every recompute -- see that function's own comment for the
-    // measured saving.
+    // loadInputGeometry (input_format.h) instead of rescanned by
+    // azimuthal::projectRings on every recompute -- see that function's
+    // own comment for the measured saving.
     wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> m_input;
     wrenium::geo::Buffer<std::uint8_t, kMaxBinaryBytes> m_binaryPath;
     bool m_inputLoaded = false;

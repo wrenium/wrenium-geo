@@ -5,10 +5,10 @@
 
 #include "doctest/doctest.h"
 
+#include "wrenium/geo/azimuthal_pipeline.h"
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/input_format.h"
-#include "wrenium/geo/pipeline.h"
 #include "wrenium/geo/workspace.h"
 
 using namespace wrenium::geo;
@@ -35,7 +35,7 @@ GeoPoint destinationPoint(const GeoPoint &center, float distanceRad, float beari
     return GeoPoint{lat2, lon2};
 }
 
-// projectRings (pipeline.h) takes each ring's precomputed [minLat, maxLat]
+// projectRings (azimuthal_pipeline.h) takes each ring's precomputed [minLat, maxLat]
 // instead of rescanning every point on every recompute (see its own
 // comment) -- these tests build a single ring directly (not via
 // loadInputGeometry, which computes this automatically), so this fills in
@@ -65,7 +65,7 @@ TEST_CASE("pipeline: center enclosed by a ring outside the clip radius synthesiz
     // is only 5 degrees -- every ring vertex is outside the clip circle, so
     // clipping alone finds nothing. But the ring surrounds the center, so
     // the correct output is the entire clip circle (§2's "fully-enclosed
-    // fallback" in pipeline.h), not an empty result.
+    // fallback" in azimuthal_pipeline.h), not an empty result.
     // Workspace needs room for well over a hundred points, not just the 4
     // input vertices -- the synthesized circle traces the boundary in ~3
     // degree steps (detail/azimuthal/clip.h's emitFullClipCircle).

@@ -8,7 +8,6 @@
 #include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/input_format.h"
-#include "wrenium/geo/pipeline.h"
 
 // loadInputGeometry parses the wire format topojson2bin produces -- either
 // the checked-in .bin file's raw bytes, or its generated .h array included

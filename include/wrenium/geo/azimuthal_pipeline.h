@@ -4,13 +4,11 @@
 #pragma once
 
 #include <cstddef>
-#include <cstdint>
 
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/detail/azimuthal/clip.h"
 #include "wrenium/geo/detail/azimuthal/equidistant.h"
 #include "wrenium/geo/detail/azimuthal/orthographic.h"
-#include "wrenium/geo/detail/byte_stream.h"
 #include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/input_format.h"
@@ -18,112 +16,18 @@
 #include "wrenium/geo/workspace.h"
 
 /// @file
-/// Orchestrates rotate -> clip -> project over a Workspace, plus loading
-/// real coastline data from the pre-projection input geometry wire format
-/// (input_format.h) that the offline converter tool produces.
+/// Orchestrates rotate -> clip -> project over a Workspace -- the pipeline
+/// this projection family needs that cylindrical (cylindrical_pipeline.h)
+/// doesn't: rotating the sphere so the projection center becomes the pole,
+/// then clipping coastline/border data down to a configurable radius
+/// around it, then projecting what's left with a closed-form
+/// radial-distance formula (equidistant.h or orthographic.h).
 
-namespace wrenium::geo {
-
-/// Parses the input_format.h wire layout (InputGeometryHeader + ring_count x
-/// { pointCount, pointCount x GeoPoint }, little-endian) out of a raw byte
-/// buffer -- the converter's checked-in .bin file, or its generated .h
-/// array compiled directly into the caller's own binary, for example --
-/// into @p geometry.
-///
-/// Also computes each ring's own [minLat, maxLat] into
-/// @p geometry's ringMinLat/ringMaxLat, one entry per ring --
-/// @ref projectRings() / @ref projectLines() need this exact bound for their whole-ring
-/// visibility pre-filter on *every* recompute, but the input geometry itself
-/// never changes between recomputes (only center/clipRadiusRad do), so it's
-/// computed once here rather than rescanned on every call.
-/// @param data Raw wire bytes.
-/// @param byteCount Number of bytes at @p data.
-/// @param geometry Receives the parsed points and per-ring metadata.
-/// @return Error::Ok on success; Error::UnrecognizedFormat for a bad
-/// magic/version; Error::TruncatedData if the stream ends before a
-/// structure it describes is fully present; Error::CapacityExceeded if the
-/// data has more points/rings than @p geometry can hold.
-template <std::size_t MaxPoints, std::size_t MaxRings>
-inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, InputGeometry<MaxPoints, MaxRings> &geometry)
-{
-    geometry.points.clear();
-    geometry.ringSizes.clear();
-    geometry.ringMinLat.clear();
-    geometry.ringMaxLat.clear();
-
-    constexpr std::size_t headerSize = sizeof(InputGeometryHeader);
-    if (byteCount < headerSize) {
-        return Error::TruncatedData;
-    }
-
-    std::size_t cursor = 0;
-    const std::uint32_t magic = detail::readU32LE(data + cursor);
-    cursor += 4;
-    const std::uint32_t version = detail::readU32LE(data + cursor);
-    cursor += 4;
-    const std::uint32_t ringCount = detail::readU32LE(data + cursor);
-    cursor += 4;
-
-    if (magic != kInputGeometryMagic || version != kInputGeometryVersion) {
-        return Error::UnrecognizedFormat;
-    }
-
-    for (std::uint32_t r = 0; r < ringCount; ++r) {
-        if (cursor + 4 > byteCount) {
-            return Error::TruncatedData;
-        }
-        const std::uint32_t pointCount = detail::readU32LE(data + cursor);
-        cursor += 4;
-
-        Error err = geometry.ringSizes.pushBack(static_cast<std::size_t>(pointCount));
-        if (err != Error::Ok) {
-            return err;
-        }
-
-        float minLat = 0.0f;
-        float maxLat = 0.0f;
-
-        for (std::uint32_t p = 0; p < pointCount; ++p) {
-            if (cursor + 8 > byteCount) {
-                return Error::TruncatedData;
-            }
-            GeoPoint point;
-            point.latRad = detail::readFloatLE(data + cursor);
-            cursor += 4;
-            point.lonRad = detail::readFloatLE(data + cursor);
-            cursor += 4;
-
-            if (p == 0) {
-                minLat = point.latRad;
-                maxLat = point.latRad;
-            } else if (point.latRad < minLat) {
-                minLat = point.latRad;
-            } else if (point.latRad > maxLat) {
-                maxLat = point.latRad;
-            }
-
-            err = geometry.points.pushBack(point);
-            if (err != Error::Ok) {
-                return err;
-            }
-        }
-
-        err = geometry.ringMinLat.pushBack(minLat);
-        if (err != Error::Ok) {
-            return err;
-        }
-        err = geometry.ringMaxLat.pushBack(maxLat);
-        if (err != Error::Ok) {
-            return err;
-        }
-    }
-
-    return Error::Ok;
-}
+namespace wrenium::geo::azimuthal {
 
 /// Rotates -> clips -> projects @p input's closed coastline-style rings
-/// into @p workspace (already loaded via loadInputGeometry(), for
-/// example). Read the result back via `workspace.projectedPoints()` /
+/// into @p workspace (already loaded via loadInputGeometry() (input_format.h),
+/// for example). Read the result back via `workspace.projectedPoints()` /
 /// `workspace.projectedRingSizes()` (or `workspace.projectedPoint()` for a
 /// single point), for the emitters or a caller's own code to consume.
 ///
@@ -244,7 +148,7 @@ inline Error projectRings(
         std::size_t outSize = 0;
         const Error err = azimuthal::clipRingToSink(
             &inputPoints[inputOffset], ringSize, center, clipRadiusRad, workspace.ringRotatedCache,
-            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(detail::PointStorage(p)); },
+            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(wrenium::geo::detail::PointStorage(p)); },
             [&workspace](std::size_t cycleSize) -> Error {
                 if (cycleSize < 3) {
                     // Not a usable closed shape -- drop just this cycle's
@@ -278,7 +182,7 @@ inline Error projectRings(
             std::size_t outSize = 0;
             const Error err = azimuthal::detail::emitFullClipCircle(
                 clipRadiusRad,
-                [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(detail::PointStorage(p)); },
+                [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(wrenium::geo::detail::PointStorage(p)); },
                 outSize);
             if (err != Error::Ok) {
                 return err;
@@ -370,7 +274,7 @@ inline Error projectLines(
         std::size_t outSize = 0;
         const Error err = azimuthal::clipLineToSink(
             &inputPoints[inputOffset], lineSize, center, clipRadiusRad,
-            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(detail::PointStorage(p)); },
+            [&workspace](const GeoPoint &p) { return workspace.stageB.pushBack(wrenium::geo::detail::PointStorage(p)); },
             [&workspace](std::size_t runSize) -> Error {
                 if (runSize < 2) {
                     // Not a usable drawable segment -- drop just this run's
@@ -447,4 +351,4 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
     return result;
 }
 
-} // namespace wrenium::geo
+} // namespace wrenium::geo::azimuthal

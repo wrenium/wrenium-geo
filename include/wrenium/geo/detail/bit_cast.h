@@ -11,9 +11,10 @@
 // portable way to do this in C++17 (no std::bit_cast until C++20, and a
 // reinterpret_cast through pointers would violate strict aliasing). Used by
 // detail/byte_stream.h's readFloatLE()/writeFloatLE(), shared by
-// binary_emitter.h and pipeline.h so the float<->bits step isn't duplicated
-// between them. Byte order itself is a separate concern, handled by plain
-// bit-shift arithmetic in detail/byte_stream.h.
+// binary_emitter.h and input_format.h's loadInputGeometry() so the
+// float<->bits step isn't duplicated between them. Byte order itself is a
+// separate concern, handled by plain bit-shift arithmetic in
+// detail/byte_stream.h.
 
 namespace wrenium::geo {
 namespace detail {

@@ -11,9 +11,10 @@
 #include "wrenium/geo/point.h"
 
 /// @file
-/// Walks a projected ring/point representation (the pipeline's output --
-/// see pipeline.h/workspace.h; a "ring" is defined in input_format.h) and
-/// writes an SVG path `d` attribute string:
+/// Walks a projected ring/point representation (either pipeline's output --
+/// see azimuthal_pipeline.h/cylindrical_pipeline.h/workspace.h; a "ring"
+/// is defined in input_format.h) and writes an SVG path `d` attribute
+/// string:
 /// "M x,y L x,y ... Z " per ring. Even-odd fill is assumed by consumers
 /// (SVG's `fill-rule="evenodd"`) -- no hole/outer ring tracking is needed
 /// here.
@@ -104,10 +105,11 @@ inline Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std:
 }
 
 /// Border-line counterpart to emitSvgPath(): walks the *open* polyline run
-/// output of @ref projectLines() (pipeline.h) and writes "M x,y L x,y ..."
-/// per run -- deliberately never appending a "Z" close command, since a
-/// border segment has no fill and closing it would draw a spurious chord
-/// straight back to its own start. Render with fillColor: "transparent"
+/// output of either projection family's own `projectLines()` and writes
+/// "M x,y L x,y ..." per run -- deliberately never appending a "Z" close
+/// command, since a border segment has no fill and closing it would draw
+/// a spurious chord straight back to its own start. Render with
+/// fillColor: "transparent"
 /// (or "none") and only a visible stroke.
 /// @param points Flat array covering every polyline run back to back.
 /// @param runSizes Point count of run i is `runSizes[i]`; runs with fewer

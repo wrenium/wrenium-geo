@@ -13,15 +13,16 @@
 #include "wrenium/geo/workspace.h"
 
 /// @file
-/// Cylindrical-family counterpart to pipeline.h -- deliberately a
-/// separate file, not added to pipeline.h itself (which is explicitly
-/// azimuthal-only: it calls into `azimuthal::` directly and its own
-/// file-level comment says so). No rotate stage, and no circular
-/// clip-radius concept the way azimuthal has: `center` recenters (see
-/// cylindrical::project()), and each entry point's `clipLatRad`/
-/// `clipLonRad` let a whole ring/run that provably can't be visible skip
-/// projection entirely -- a coarse, conservative pre-check (see each
-/// function's own doc comment), not an exact geometric clip.
+/// Cylindrical-family counterpart to azimuthal_pipeline.h -- deliberately
+/// its own file and its own `cylindrical::` namespace, mirroring that
+/// file's `azimuthal::` one, rather than a mode flag on a single shared
+/// pipeline: the two families need genuinely different orchestration (no
+/// rotate stage here, and no circular clip-radius concept the way
+/// azimuthal has). `center` recenters (see cylindrical::project()), and
+/// each entry point's `clipLatRad`/`clipLonRad` let a whole ring/run that
+/// provably can't be visible skip projection entirely -- a coarse,
+/// conservative pre-check (see each function's own doc comment), not an
+/// exact geometric clip.
 ///
 /// **Antimeridian handling.** Every point's own map position is
 /// `wrapPi(point.lonRad - center.lonRad)` -- independently computed, no
@@ -47,7 +48,7 @@
 /// mechanism); what's here adapts the same idea to this library's simpler
 /// case -- a rectangular Mercator map, clipping against two straight
 /// vertical lines (`x = +-halfWorldWidth`) -- rather than porting d3's
-/// implementation directly. See projectRingsMercator()'s own comment for
+/// implementation directly. See projectRings()'s own comment for
 /// where the two approaches (same-edge closing vs. a pole-encircling ring)
 /// diverge and why.
 ///
@@ -130,7 +131,7 @@ inline BoundaryStep stepAcrossBoundary(float x0, float deltaRad)
 /// own overview comment for the antimeridian-handling design) -- every
 /// point in a ring that survives the visibility pre-check below is
 /// projected unconditionally (no exact geometric clip). Read the result
-/// back the same way as @ref projectRings() (pipeline.h):
+/// back the same way as azimuthal::projectRings() (azimuthal_pipeline.h):
 /// `workspace.svgPath`, `projectedPoint()`, or `projectedPoints()` /
 /// `projectedRingSizes()`.
 ///
@@ -179,7 +180,7 @@ inline BoundaryStep stepAcrossBoundary(float x0, float deltaRad)
 /// value (itself within `(-kPi, kPi]`), so neither cull test can ever
 /// trigger at that default.
 /// @param workspace The Workspace to project into.
-/// @param input The loaded ring geometry, from loadInputGeometry() (pipeline.h).
+/// @param input The loaded ring geometry, from loadInputGeometry() (input_format.h).
 /// @param center The recenter point -- see cylindrical::project().
 /// @param scale Output units per kilometer.
 /// @param clipLatRad Half-height of the visible window, radians of
@@ -192,7 +193,7 @@ inline BoundaryStep stepAcrossBoundary(float x0, float deltaRad)
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
 template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
-inline Error projectRingsMercator(
+inline Error projectRings(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
@@ -565,11 +566,11 @@ inline Error projectRingsMercator(
     return Error::Ok;
 }
 
-/// Border-line counterpart to @ref projectRingsMercator(), for *open*
+/// Border-line counterpart to @ref projectRings(), for *open*
 /// polyline data -- same antimeridian handling (see this file's own
 /// overview comment for the design and its d3-geo reference), but every
 /// piece (including a run that never crosses at all) is open, matching
-/// @ref projectLines() (pipeline.h). No pole-encircling square-off and no
+/// azimuthal::projectLines() (azimuthal_pipeline.h). No pole-encircling square-off and no
 /// same-edge-vs-different-edge closing distinction: those exist to fix an
 /// *implicit closing edge* a filled ring gets and an open line never does,
 /// so a line has nothing to close at all -- every crossing simply ends one
@@ -577,19 +578,19 @@ inline Error projectRingsMercator(
 /// (this file's own overview comment) rather than a jump across the map.
 ///
 /// @p clipLatRad/@p clipLonRad: same visibility pre-check as
-/// @ref projectRingsMercator() (see its own doc comment for the details
+/// @ref projectRings() (see its own doc comment for the details
 /// and the safety property), including the same per-fragment (here,
 /// per-run) precise check once each run's own exact bounds are known.
 /// @param workspace The Workspace to project into.
-/// @param input The loaded line geometry, from loadInputGeometry() (pipeline.h).
+/// @param input The loaded line geometry, from loadInputGeometry() (input_format.h).
 /// @param center The recenter point -- see cylindrical::project().
 /// @param scale Output units per kilometer.
-/// @param clipLatRad See @ref projectRingsMercator()'s identical parameter.
-/// @param clipLonRad See @ref projectRingsMercator()'s identical parameter.
+/// @param clipLatRad See @ref projectRings()'s identical parameter.
+/// @param clipLonRad See @ref projectRings()'s identical parameter.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
 template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
-inline Error projectLinesMercator(
+inline Error projectLines(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
@@ -605,7 +606,7 @@ inline Error projectLinesMercator(
     workspace.stageB.clear();
     workspace.ringSizesB.clear();
 
-    // See projectRingsMercator()'s identical comment.
+    // See projectRings()'s identical comment.
     const float centerY = detail::projectY(center.latRad, scale);
     const float visLatMin = center.latRad - clipLatRad;
     const float visLatMax = center.latRad + clipLatRad;
@@ -624,7 +625,7 @@ inline Error projectLinesMercator(
             continue;
         }
 
-        // See projectRingsMercator()'s identical longitude-bounds pass and
+        // See projectRings()'s identical longitude-bounds pass and
         // its identical shifted-range cull check below for the reasoning
         // -- this coarse, whole-run pre-check is unaffected by this file's
         // antimeridian-handling rewrite.
@@ -686,7 +687,7 @@ inline Error projectLinesMercator(
                 continue;
             }
 
-            // See projectRingsMercator()'s identical crossing/interpolation
+            // See projectRings()'s identical crossing/interpolation
             // comment.
             const float boundary = step.crossesPositive ? kPi : -kPi;
             const float t = (boundary - x) / delta;

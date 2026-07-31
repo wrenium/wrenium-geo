@@ -6,15 +6,16 @@
 
 #include "doctest/doctest.h"
 
+#include "wrenium/geo/azimuthal_pipeline.h"
 #include "wrenium/geo/binary_emitter.h"
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/input_format.h"
-#include "wrenium/geo/pipeline.h"
 #include "wrenium/geo/svg_emitter.h"
 #include "wrenium/geo/workspace.h"
 
 using namespace wrenium::geo;
+using namespace wrenium::geo::azimuthal;
 
 // Automated host-side timing benchmark: this can't validate real embedded-
 // target cycle counts -- that needs real hardware -- but it catches gross

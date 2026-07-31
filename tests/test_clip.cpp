@@ -40,7 +40,7 @@ GeoPoint destinationPoint(const GeoPoint &center, float distanceRad, float beari
 
 // An arbitrary, non-degenerate center used throughout this file -- not the
 // pole and not the equator/prime-meridian special cases, so these tests
-// exercise the same rotate() code path pipeline.h actually uses.
+// exercise the same rotate() code path azimuthal_pipeline.h actually uses.
 constexpr float kTestCenterLat = 0.3f;
 constexpr float kTestCenterLon = 0.5f;
 GeoPoint testCenter()

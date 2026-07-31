@@ -7,11 +7,15 @@
 #include <cstdint>
 
 #include "wrenium/geo/buffer.h"
+#include "wrenium/geo/detail/byte_stream.h"
+#include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
 
 /// @file
 /// Pre-projection input geometry binary format -- written by the offline
-/// converter tool and read by loadInputGeometry() (pipeline.h).
+/// converter tool and read by loadInputGeometry(), below. Projection-
+/// agnostic: both the azimuthal (azimuthal_pipeline.h) and cylindrical
+/// (cylindrical_pipeline.h) pipelines read the InputGeometry this produces.
 ///
 /// A **ring** is a closed sequence of points describing one polygon
 /// boundary -- one landmass's coastline, or one island, for example. A
@@ -52,9 +56,11 @@ struct InputGeometryHeader
 };
 
 /// A loaded, in-memory input dataset -- what loadInputGeometry() fills and
-/// @ref projectRings() / @ref projectLines() (pipeline.h) read from. Bundles the point
-/// list with its per-ring metadata into one value so they're always passed
-/// (and can't accidentally be mismatched) together.
+/// azimuthal::projectRings() / azimuthal::projectLines()
+/// (azimuthal_pipeline.h) or cylindrical::projectRings() /
+/// cylindrical::projectLines() (cylindrical_pipeline.h) read from. Bundles
+/// the point list with its per-ring metadata into one value so they're
+/// always passed (and can't accidentally be mismatched) together.
 /// @tparam MaxPoints Capacity of #points.
 /// @tparam MaxRings Capacity of #ringSizes/#ringMinLat/#ringMaxLat.
 template <std::size_t MaxPoints, std::size_t MaxRings>
@@ -69,5 +75,103 @@ struct InputGeometry
     /// Each ring's maximum latitude (radians), one entry per ring.
     Buffer<float, MaxRings> ringMaxLat;
 };
+
+/// Parses this file's own wire layout (InputGeometryHeader + ring_count x
+/// { pointCount, pointCount x GeoPoint }, little-endian) out of a raw byte
+/// buffer -- the converter's checked-in .bin file, or its generated .h
+/// array compiled directly into the caller's own binary, for example --
+/// into @p geometry.
+///
+/// Also computes each ring's own [minLat, maxLat] into
+/// @p geometry's ringMinLat/ringMaxLat, one entry per ring --
+/// azimuthal::projectRings() / azimuthal::projectLines()
+/// (azimuthal_pipeline.h) need this exact bound for their whole-ring
+/// visibility pre-filter on *every* recompute, but the input geometry itself
+/// never changes between recomputes (only center/clipRadiusRad do), so it's
+/// computed once here rather than rescanned on every call.
+/// @param data Raw wire bytes.
+/// @param byteCount Number of bytes at @p data.
+/// @param geometry Receives the parsed points and per-ring metadata.
+/// @return Error::Ok on success; Error::UnrecognizedFormat for a bad
+/// magic/version; Error::TruncatedData if the stream ends before a
+/// structure it describes is fully present; Error::CapacityExceeded if the
+/// data has more points/rings than @p geometry can hold.
+template <std::size_t MaxPoints, std::size_t MaxRings>
+inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, InputGeometry<MaxPoints, MaxRings> &geometry)
+{
+    geometry.points.clear();
+    geometry.ringSizes.clear();
+    geometry.ringMinLat.clear();
+    geometry.ringMaxLat.clear();
+
+    constexpr std::size_t headerSize = sizeof(InputGeometryHeader);
+    if (byteCount < headerSize) {
+        return Error::TruncatedData;
+    }
+
+    std::size_t cursor = 0;
+    const std::uint32_t magic = detail::readU32LE(data + cursor);
+    cursor += 4;
+    const std::uint32_t version = detail::readU32LE(data + cursor);
+    cursor += 4;
+    const std::uint32_t ringCount = detail::readU32LE(data + cursor);
+    cursor += 4;
+
+    if (magic != kInputGeometryMagic || version != kInputGeometryVersion) {
+        return Error::UnrecognizedFormat;
+    }
+
+    for (std::uint32_t r = 0; r < ringCount; ++r) {
+        if (cursor + 4 > byteCount) {
+            return Error::TruncatedData;
+        }
+        const std::uint32_t pointCount = detail::readU32LE(data + cursor);
+        cursor += 4;
+
+        Error err = geometry.ringSizes.pushBack(static_cast<std::size_t>(pointCount));
+        if (err != Error::Ok) {
+            return err;
+        }
+
+        float minLat = 0.0f;
+        float maxLat = 0.0f;
+
+        for (std::uint32_t p = 0; p < pointCount; ++p) {
+            if (cursor + 8 > byteCount) {
+                return Error::TruncatedData;
+            }
+            GeoPoint point;
+            point.latRad = detail::readFloatLE(data + cursor);
+            cursor += 4;
+            point.lonRad = detail::readFloatLE(data + cursor);
+            cursor += 4;
+
+            if (p == 0) {
+                minLat = point.latRad;
+                maxLat = point.latRad;
+            } else if (point.latRad < minLat) {
+                minLat = point.latRad;
+            } else if (point.latRad > maxLat) {
+                maxLat = point.latRad;
+            }
+
+            err = geometry.points.pushBack(point);
+            if (err != Error::Ok) {
+                return err;
+            }
+        }
+
+        err = geometry.ringMinLat.pushBack(minLat);
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = geometry.ringMaxLat.pushBack(maxLat);
+        if (err != Error::Ok) {
+            return err;
+        }
+    }
+
+    return Error::Ok;
+}
 
 } // namespace wrenium::geo

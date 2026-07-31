@@ -3,18 +3,19 @@
 
 #include "doctest/doctest.h"
 
+#include "wrenium/geo/azimuthal_pipeline.h"
 #include "wrenium/geo/buffer.h"
 #include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/input_format.h"
-#include "wrenium/geo/pipeline.h"
 #include "wrenium/geo/workspace.h"
 
 using namespace wrenium::geo;
+using namespace wrenium::geo::azimuthal;
 
 namespace {
 
-// projectRings (pipeline.h) takes each ring's precomputed [minLat, maxLat]
+// projectRings (azimuthal_pipeline.h) takes each ring's precomputed [minLat, maxLat]
 // instead of rescanning every point on every recompute (see its own
 // comment) -- these tests build a single ring directly (not via
 // loadInputGeometry, which computes this automatically), so this fills in
@@ -95,7 +96,7 @@ TEST_CASE("A Workspace's point capacity overflowing via the pipeline reports Err
 
     // 8 input points -- twice what the workspace can hold -- in one ring.
     // The input's own capacity is independent of the workspace's (see
-    // pipeline.h's projectRings comment), so this is legal to construct
+    // azimuthal_pipeline.h's projectRings comment), so this is legal to construct
     // and lets the test reach the workspace's real limit as detail/azimuthal/clip.h pushes
     // surviving (rotated) points into stageB.
     InputGeometry<8, 4> input;

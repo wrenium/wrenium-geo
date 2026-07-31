@@ -3,11 +3,11 @@
 
 #include "WreniumGeoBridge.h"
 
+#include <wrenium/geo/azimuthal_pipeline.h>
 #include <wrenium/geo/binary_emitter.h>
 #include <wrenium/geo/cylindrical_pipeline.h>
 #include <wrenium/geo/detail/azimuthal/orthographic.h>
 #include <wrenium/geo/detail/cylindrical/mercator.h>
-#include <wrenium/geo/pipeline.h>
 #include <wrenium/geo/projection.h>
 #include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/viewport.h>
@@ -64,8 +64,8 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
     const wrenium::geo::Error pipelineErr = useOrthographic
-        ? wrenium::geo::projectRings<wrenium::geo::azimuthal::projectOrthographic>(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale)
-        : wrenium::geo::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale);
+        ? wrenium::geo::azimuthal::projectRings<wrenium::geo::azimuthal::projectOrthographic>(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale)
+        : wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -115,8 +115,8 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
     const wrenium::geo::Error pipelineErr = useOrthographic
-        ? wrenium::geo::projectLines<wrenium::geo::azimuthal::projectOrthographic>(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale)
-        : wrenium::geo::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale);
+        ? wrenium::geo::azimuthal::projectLines<wrenium::geo::azimuthal::projectOrthographic>(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale)
+        : wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -156,9 +156,9 @@ QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double cente
     // the SVG/binary path output puts the same location.
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
-    const wrenium::geo::ProjectedPoint projected = useOrthographic
-        ? wrenium::geo::projectPoint<wrenium::geo::azimuthal::projectOrthographic>(rawPoint, center, viewport.clipRadiusRad, viewport.scale)
-        : wrenium::geo::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale);
+    const wrenium::geo::azimuthal::ProjectedPoint projected = useOrthographic
+        ? wrenium::geo::azimuthal::projectPoint<wrenium::geo::azimuthal::projectOrthographic>(rawPoint, center, viewport.clipRadiusRad, viewport.scale)
+        : wrenium::geo::azimuthal::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale);
 
     if (!projected.visible) {
         return {0.0, 0.0, false};
@@ -185,7 +185,7 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
     const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
     const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
 
-    const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectRingsMercator(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
+    const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectRings(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -228,7 +228,7 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
     const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
     const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
 
-    const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectLinesMercator(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
+    const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectLines(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }

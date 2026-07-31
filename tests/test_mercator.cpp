@@ -51,7 +51,7 @@ bool approxEqual(float a, float b, float tolerance)
 }
 
 // Pushes one ring/run's points plus its ringSizes/ringMinLat/ringMaxLat
-// entries -- what loadInputGeometry() (pipeline.h) computes automatically
+// entries -- what loadInputGeometry() (input_format.h) computes automatically
 // from the real binary wire format, but these tests build InputGeometry
 // by hand. Needed for any test that exercises a non-default clipLatRad/
 // clipLonRad: the culling pre-check reads ringMinLat/ringMaxLat directly,
@@ -240,7 +240,7 @@ TEST_CASE("Mercator pipeline: a ring that doesn't cross the antimeridian stays o
     input.ringSizes.pushBack(4);
 
     const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f);
+    const Error err = projectRings(workspace, input, center, 1.0f);
 
     REQUIRE(err == Error::Ok);
     REQUIRE(workspace.projectedRingSizes().size() == 1);
@@ -265,7 +265,7 @@ TEST_CASE("Mercator pipeline: a ring crossing the antimeridian splits into two p
     input.ringSizes.pushBack(4);
 
     const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f);
+    const Error err = projectRings(workspace, input, center, 1.0f);
 
     REQUIRE(err == Error::Ok);
     REQUIRE(workspace.projectedRingSizes().size() == 2);
@@ -325,7 +325,7 @@ TEST_CASE("Mercator pipeline: a line crossing the antimeridian splits into two o
     input.ringSizes.pushBack(4);
 
     const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
-    const Error err = projectLinesMercator(workspace, input, center, 1.0f);
+    const Error err = projectLines(workspace, input, center, 1.0f);
 
     REQUIRE(err == Error::Ok);
     REQUIRE(workspace.projectedRingSizes().size() == 2);
@@ -338,7 +338,7 @@ TEST_CASE("Mercator pipeline: a line crossing the antimeridian splits into two o
     CHECK(workspace.projectedRingSizes()[1] == 3);
 
     // Both runs stay on their own side of the map, meeting only exactly
-    // at the boundary -- the same property projectRingsMercator()'s own
+    // at the boundary -- the same property projectRings()'s own
     // identical test checks. The first run (165, 175 degrees) stays
     // positive; the second (-175, -170 degrees) stays negative.
     const float halfWorldWidth = kPi * kEarthRadiusKm;
@@ -485,7 +485,7 @@ TEST_CASE("Mercator: a ring entirely outside the clip window is culled")
     // Window centered on the north pole -- nowhere near this ring's
     // 10-20 deg latitude band.
     const GeoPoint center = makeGeoPoint(89.0f, 0.0f);
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f, 0.05f, 0.05f);
+    const Error err = projectRings(workspace, input, center, 1.0f, 0.05f, 0.05f);
 
     REQUIRE(err == Error::Ok);
     CHECK(workspace.projectedRingSizes().size() == 0);
@@ -508,7 +508,7 @@ TEST_CASE("Mercator: a ring only partially inside the clip window is kept in ful
     // the culling pre-check is ring-granularity, not point-granularity, so
     // every point should still come through.
     const GeoPoint center = makeGeoPoint(5.0f, 15.0f);
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f, 0.1745f, 0.1745f); // ~10 deg
+    const Error err = projectRings(workspace, input, center, 1.0f, 0.1745f, 0.1745f); // ~10 deg
 
     REQUIRE(err == Error::Ok);
     REQUIRE(workspace.projectedRingSizes().size() == 1);
@@ -541,7 +541,7 @@ TEST_CASE("Mercator: a window overlapping a ring's own point never wrongly culls
     pushRing(input, wideRing);
 
     const GeoPoint center = makeGeoPoint(5.0f, 170.0f); // == wideRing[0]
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f, 0.05f, 0.05f);
+    const Error err = projectRings(workspace, input, center, 1.0f, 0.05f, 0.05f);
 
     REQUIRE(err == Error::Ok);
     std::size_t totalPoints = 0;
@@ -572,7 +572,7 @@ TEST_CASE("Mercator: a pole-encircling ring is culled by latitude, never by long
         static InputGeometry<64, 8> input;
         pushRing(input, poleRing);
         const GeoPoint farCenter = makeGeoPoint(0.0f, 0.0f);
-        const Error err = projectRingsMercator(workspace, input, farCenter, 1.0f, 0.1f, kPi);
+        const Error err = projectRings(workspace, input, farCenter, 1.0f, 0.1f, kPi);
         REQUIRE(err == Error::Ok);
         CHECK(workspace.projectedRingSizes().size() == 0);
     }
@@ -585,11 +585,11 @@ TEST_CASE("Mercator: a pole-encircling ring is culled by latitude, never by long
         static InputGeometry<64, 8> input;
         pushRing(input, poleRing);
         const GeoPoint nearCenter = makeGeoPoint(-80.0f, 0.0f);
-        const Error err = projectRingsMercator(workspace, input, nearCenter, 1.0f, 0.1f, 0.01f);
+        const Error err = projectRings(workspace, input, nearCenter, 1.0f, 0.1f, 0.01f);
         REQUIRE(err == Error::Ok);
         REQUIRE(workspace.projectedRingSizes().size() == 1);
         // +2 for the pole square-off corners this ring's own encircling
-        // logic adds -- see projectRingsMercator()'s own comment.
+        // logic adds -- see projectRings()'s own comment.
         CHECK(workspace.projectedRingSizes()[0] == 6);
     }
 }
@@ -625,7 +625,7 @@ TEST_CASE("Mercator pipeline: a wide (>180 degree) ring stays correctly position
     pushRing(input, wideRing);
 
     const GeoPoint center = makeGeoPoint(10.0f, 11.0f);
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f);
+    const Error err = projectRings(workspace, input, center, 1.0f);
 
     REQUIRE(err == Error::Ok);
     // Two real raw crossings (179 -> -179, and the ring's own closing edge
@@ -696,7 +696,7 @@ TEST_CASE("Mercator pipeline: a ring straddling the center's own map-edge seam s
     // degrees) falls right in the middle of this ring's 100..140 degree
     // span, so it genuinely straddles this center's own map-edge seam.
     const GeoPoint center = makeGeoPoint(0.0f, -60.0f);
-    const Error err = projectRingsMercator(workspace, input, center, 1.0f, kPi, kPi);
+    const Error err = projectRings(workspace, input, center, 1.0f, kPi, kPi);
 
     REQUIRE(err == Error::Ok);
     // Split into (at least) two pieces -- one per screen edge -- instead
@@ -734,8 +734,8 @@ TEST_CASE("Mercator: default clip window matches the unconditional (no-clip) beh
     pushRing(input, square);
 
     const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
-    const Error errDefault = projectRingsMercator(workspaceDefault, input, center, 1.0f);
-    const Error errExplicit = projectRingsMercator(workspaceExplicit, input, center, 1.0f, kPi, kPi);
+    const Error errDefault = projectRings(workspaceDefault, input, center, 1.0f);
+    const Error errExplicit = projectRings(workspaceExplicit, input, center, 1.0f, kPi, kPi);
 
     REQUIRE(errDefault == Error::Ok);
     REQUIRE(errExplicit == Error::Ok);
@@ -744,7 +744,7 @@ TEST_CASE("Mercator: default clip window matches the unconditional (no-clip) beh
     CHECK(workspaceDefault.projectedRingSizes()[0] == 4);
 }
 
-TEST_CASE("Mercator: projectLinesMercator culls an out-of-window run and keeps a partially-visible one in full")
+TEST_CASE("Mercator: projectLines culls an out-of-window run and keeps a partially-visible one in full")
 {
     {
         static Workspace<64, 8> workspace;
@@ -755,7 +755,7 @@ TEST_CASE("Mercator: projectLinesMercator culls an out-of-window run and keeps a
         };
         pushRing(input, line);
         const GeoPoint farCenter = makeGeoPoint(-80.0f, 0.0f);
-        const Error err = projectLinesMercator(workspace, input, farCenter, 1.0f, 0.05f, 0.05f);
+        const Error err = projectLines(workspace, input, farCenter, 1.0f, 0.05f, 0.05f);
         REQUIRE(err == Error::Ok);
         CHECK(workspace.projectedRingSizes().size() == 0);
     }
@@ -768,7 +768,7 @@ TEST_CASE("Mercator: projectLinesMercator culls an out-of-window run and keeps a
         };
         pushRing(input, line);
         const GeoPoint center = makeGeoPoint(5.0f, 10.0f); // == line[0]
-        const Error err = projectLinesMercator(workspace, input, center, 1.0f, 0.05f, 0.05f);
+        const Error err = projectLines(workspace, input, center, 1.0f, 0.05f, 0.05f);
         REQUIRE(err == Error::Ok);
         REQUIRE(workspace.projectedRingSizes().size() == 1);
         CHECK(workspace.projectedRingSizes()[0] == 2);
