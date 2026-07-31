@@ -192,6 +192,10 @@ inline BoundaryStep stepAcrossBoundary(float x0, float deltaRad)
 /// is skipped, and likewise for each individual output fragment.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
+// scale/clipLatRad/clipLonRad are documented and always passed in this
+// order across every call site in this codebase (see @param above);
+// reordering one alone would be its own hazard.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
 template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
@@ -200,6 +204,7 @@ inline Error projectRings(
     float scale,
     float clipLatRad = kPi,
     float clipLonRad = kPi)
+// NOLINTEND(bugprone-easily-swappable-parameters)
 {
     const Buffer<GeoPoint, InputMaxPoints> &inputPoints = input.points;
     const Buffer<std::size_t, InputMaxRings> &inputRingSizes = input.ringSizes;
@@ -589,6 +594,8 @@ inline Error projectRings(
 /// @param clipLonRad See @ref projectRings()'s identical parameter.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
+// See projectRings's identical parameter pair and NOLINT rationale above.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
 template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
@@ -597,6 +604,7 @@ inline Error projectLines(
     float scale,
     float clipLatRad = kPi,
     float clipLonRad = kPi)
+// NOLINTEND(bugprone-easily-swappable-parameters)
 {
     const Buffer<GeoPoint, InputMaxPoints> &inputPoints = input.points;
     const Buffer<std::size_t, InputMaxRings> &inputRingSizes = input.ringSizes;

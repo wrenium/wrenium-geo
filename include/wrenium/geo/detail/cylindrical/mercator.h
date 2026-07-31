@@ -40,7 +40,7 @@ namespace detail {
 /// wrap -- see that file's own comment for why). Latitude is silently
 /// clamped to +-kMercatorMaxLatRad first (see #kMercatorMaxLatRad) --
 /// Mercator's own y has no finite value at the true poles.
-inline float projectY(float latRad, float scale)
+inline float projectY(float latRad, float scale) // NOLINT(bugprone-easily-swappable-parameters)
 {
     float clampedLat = latRad;
     if (clampedLat > kMercatorMaxLatRad) {
@@ -130,7 +130,7 @@ inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scal
 /// -- there's no latitude that avoids dead space on both edges at once,
 /// so centering is the least-bad choice, matching how standard web map
 /// libraries lock vertical panning entirely once zoomed out that far.
-inline float clampCenterLatForViewport(float latRad, float scale, float viewportHeightPx)
+inline float clampCenterLatForViewport(float latRad, float scale, float viewportHeightPx) // NOLINT(bugprone-easily-swappable-parameters)
 {
     const float halfHeightPx = viewportHeightPx * 0.5f;
     const float maxY = -detail::projectY(kMercatorMaxLatRad, scale); // always positive

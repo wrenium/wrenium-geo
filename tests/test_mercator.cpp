@@ -20,7 +20,7 @@ namespace {
 // Independent oracle for project()'s expected output: plain <cmath>
 // std::atanh, not wrenium-f32math's own approximation -- a real check
 // against a different implementation, not just self-consistency.
-float expectedMercatorY(float latRad, float scale)
+float expectedMercatorY(float latRad, float scale) // NOLINT(bugprone-easily-swappable-parameters)
 {
     float lat = latRad;
     if (lat > kMercatorMaxLatRad) {
