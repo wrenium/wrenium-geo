@@ -114,7 +114,7 @@ jobs:
           target_link_libraries(uses_wrenium_geo PRIVATE Wrenium::geo)
           EOF
           cat > consumer/main.cpp <<'EOF'
-          #include <wrenium/geo/pipeline.h>
+          #include <wrenium/geo/azimuthal_pipeline.h>
           int main() { return 0; }
           EOF
 
