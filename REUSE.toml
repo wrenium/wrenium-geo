@@ -21,9 +21,14 @@ path = [
 SPDX-FileCopyrightText = "2026 Tommi Tauriainen"
 SPDX-License-Identifier = "MIT"
 
-# Generated screenshot -- binary, can't carry an inline header.
+# Generated screenshots -- binary, can't carry an inline header.
 [[annotations]]
-path = "docs/azimuthmap-screenshot.png"
+path = [
+    "docs/azimuthmap-screenshot.png",
+    "docs/equidistant-sample.png",
+    "docs/orthographic-sample.png",
+    "docs/mercator-sample.png",
+]
 SPDX-FileCopyrightText = "2026 Tommi Tauriainen"
 SPDX-License-Identifier = "MIT"
 
