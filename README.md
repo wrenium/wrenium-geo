@@ -6,36 +6,32 @@
 [API documentation](https://wrenium.github.io/wrenium-geo/)
 
 A C++17 header-only geometry library that projects geographic coastline and
-border data onto a 2D plane -- either centered on an arbitrary point via
-azimuthal equidistant (distance-preserving) or azimuthal orthographic
-("viewed from space") projection, with room for other azimuthal variants
-later, or as a whole-world Web Mercator map via its own separate pipeline --
-emitting either an SVG path string or a compact binary path stream. Built
-for constrained environments: zero heap allocation, and no exceptions or
-RTTI anywhere in the library.
+border data onto a 2D plane. Three projections are supported: azimuthal
+equidistant, azimuthal orthographic, and whole-world Web Mercator. Output
+is either an SVG path string or a compact binary path stream. Built for
+constrained environments: zero heap allocation, and no exceptions or RTTI
+anywhere in the library.
 
 ![Example output from examples/azimuthmap](docs/azimuthmap-screenshot.png)
 
 ## Features
 
-- **Produces map geometry centered on any point on Earth**, via a rotate ->
-  clip -> project pipeline: rotates the sphere so that center point becomes
+- **Azimuthal equidistant/orthographic**, centered on any point on Earth,
+  via a rotate -> clip -> project pipeline
+  (`wrenium::geo::azimuthal::projectRings`/`projectLines`/`projectPoint`,
+  `azimuthal_pipeline.h`): rotates the sphere so that center point becomes
   the pole, clips coastline/border data down to a configurable radius
   around it, then projects what's left with a closed-form radial-distance
-  formula. Two are built in, selected via `projectRings`/`projectLines`/
-  `projectPoint`'s `ProjectFn` template parameter (defaults to
-  equidistant): **equidistant** (true distance and bearing from the center
-  point are preserved exactly) and **orthographic** (renders as if viewed
-  from infinitely far away -- the disk edge is the horizon; only meaningful
-  up to a 90 degree clip radius). Both share the same rotation step, so
-  adding another azimuthal variant only needs its own radial formula, not a
-  new pipeline.
-- **Whole-world Web Mercator**, via a separate pipeline (`projectRingsMercator`/
-  `projectLinesMercator`, `cylindrical_pipeline.h`) -- cylindrical, not
-  azimuthal, so no rotate/clip stage: every point is projected
-  unconditionally, with pole-latitude clamping and antimeridian-crossing
-  splitting (including rings that fully encircle a pole) handled
-  automatically. See the "Mercator" section below.
+  formula. Selected via the `ProjectFn` template parameter (defaults to
+  equidistant): **equidistant** (true distance and bearing from the
+  center point are preserved exactly) and **orthographic** (renders as if
+  viewed from infinitely far away -- the disk edge is the horizon; only
+  meaningful up to a 90 degree clip radius).
+- **Whole-world Web Mercator** (`wrenium::geo::cylindrical::projectRings`/
+  `projectLines`, `cylindrical_pipeline.h`): no exact per-point clip, just
+  an optional coarse visibility cull, with pole-latitude clamping and
+  antimeridian-crossing splitting (including rings that fully encircle a
+  pole) handled automatically. See the "Mercator" section below.
 - **Fixed-capacity, zero-heap containers** throughout (`Buffer<T, Capacity>`),
   sized entirely at compile time via template parameters -- no
   `std::vector`, no dynamic allocation.
@@ -50,6 +46,32 @@ RTTI anywhere in the library.
   the library's own binary input-geometry format, output as both a raw
   `.bin` file and a generated C++ header (a `static const uint8_t[]` array
   to `#include` directly).
+
+## Projections
+
+| Azimuthal equidistant | Azimuthal orthographic | Web Mercator |
+| --- | --- | --- |
+| ![Azimuthal equidistant sample](docs/equidistant-sample.png) | ![Azimuthal orthographic sample](docs/orthographic-sample.png) | ![Web Mercator sample](docs/mercator-sample.png) |
+
+**Azimuthal equidistant** centers the map on any point and preserves true
+distance and bearing from that center exactly -- a straight line from the
+center to any other point on the map has the correct real-world length and
+compass direction. Used for range/bearing displays like antenna rotator or
+radar consoles.
+
+**Azimuthal orthographic** also centers on any point, but renders as if
+viewed from infinitely far away in space -- the disk edge is the horizon,
+and shapes noticeably foreshorten as they approach it. Only meaningful up
+to a 90 degree clip radius (past that, the far hemisphere would fold back
+onto the near one).
+
+**Web Mercator** is the familiar rectangular world map used by most web
+mapping services -- straight lines of constant compass bearing are
+straight on the map, but area is distorted at high latitude (Greenland
+looks continent-sized). Not centered on an arbitrary point via rotation
+like the azimuthal pair; it's a whole-world cylindrical projection with
+its own pipeline (`cylindrical::projectRings`/`projectLines`, see the
+"Mercator" section below).
 
 ## Terminology
 
@@ -168,8 +190,8 @@ three calls a caller re-runs on every pan/zoom, just with a different
 `center`/`clipRadiusRad`.
 
 ```cpp
+#include <wrenium/geo/azimuthal_pipeline.h>
 #include <wrenium/geo/input_format.h>
-#include <wrenium/geo/pipeline.h>
 #include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/workspace.h>
 
@@ -192,7 +214,7 @@ const float clipRadiusRad = clipRadiusKm / wrenium::geo::kEarthRadiusKm;
 const float scale = viewportRadiusPx / clipRadiusKm; // output units per km
 
 // Rotate -> clip -> project every coastline ring, writing the result into coastline.
-wrenium::geo::projectRings(coastline, coastlineInput, center, clipRadiusRad, scale);
+wrenium::geo::azimuthal::projectRings(coastline, coastlineInput, center, clipRadiusRad, scale);
 
 // Read the result back out as an SVG path `d` string.
 wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
@@ -202,36 +224,32 @@ wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSi
 ```
 
 To use the orthographic projection instead, pass `projectOrthographic` as
-`projectRings`/`projectLines`/`projectPoint`'s `ProjectFn` template
-argument (each call site picks independently, but must agree across a
-single map or the layers won't line up):
+`azimuthal::projectRings`/`projectLines`/`projectPoint`'s `ProjectFn`
+template argument (each call site picks independently, but must agree
+across a single map or the layers won't line up):
 
 ```cpp
 #include <wrenium/geo/detail/azimuthal/orthographic.h>
 
-wrenium::geo::projectRings<wrenium::geo::azimuthal::projectOrthographic>(
+wrenium::geo::azimuthal::projectRings<wrenium::geo::azimuthal::projectOrthographic>(
     coastline, coastlineInput, center, clipRadiusRad, scale);
 ```
 
 ### Mercator
 
-This is **Web Mercator** (spherical, not ellipsoidal -- EPSG:3857-style),
-and it's **not** a `ProjectFn` choice on `projectRings`/`projectLines`: it's
-cylindrical, not azimuthal, so there's no rotate-to-pole step. It has its
-own pipeline, `projectRingsMercator`/`projectLinesMercator`
-(`cylindrical_pipeline.h`). No *exact* per-point clip the way the
-azimuthal family's circular clip radius does (points are never trimmed
-to a boundary) -- but the optional `clipLatRad`/`clipLonRad` parameters
-let a whole ring/run that's provably outside the visible window skip
-projection entirely, a coarse, conservative visibility cull. Every point
-that survives it is projected unconditionally, with latitude silently
-clamped to the standard pole limit (~85.0511 degrees) and any
-antimeridian crossing (including a ring that fully encircles a pole,
-e.g. Antarctica) handled automatically. `center` is a true 2D recenter
-point, same as the azimuthal family's own convention (`project(center,
-center, scale)` is always `(0, 0)`) -- also invertible via
-`cylindrical::unproject()`, for turning a screen click back into a
-GeoPoint (see `examples/mercatormap`):
+via `cylindrical::projectRings`/`projectLines` (`cylindrical_pipeline.h`).
+No *exact* per-point clip the way the azimuthal family's circular clip
+radius does (points are never trimmed to a boundary) -- but the optional
+`clipLatRad`/`clipLonRad` parameters let a whole ring/run that's provably
+outside the visible window skip projection entirely, a coarse,
+conservative visibility cull. Every point that survives it is projected
+unconditionally, with latitude silently clamped to the standard pole
+limit (~85.0511 degrees) and any antimeridian crossing (including a ring
+that fully encircles a pole, e.g. Antarctica) handled automatically.
+`center` is a true 2D recenter point, same as the azimuthal family's own
+convention (`project(center, center, scale)` is always `(0, 0)`) -- also
+invertible via `cylindrical::unproject()`, for turning a screen click
+back into a GeoPoint (see `examples/mercatormap`):
 
 ```cpp
 #include <wrenium/geo/cylindrical_pipeline.h>
@@ -239,7 +257,7 @@ GeoPoint (see `examples/mercatormap`):
 const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(0.0f, 0.0f); // only lonRad is used
 const float scale = 0.03f; // output units per km
 
-wrenium::geo::cylindrical::projectRingsMercator(coastline, coastlineInput, center, scale);
+wrenium::geo::cylindrical::projectRings(coastline, coastlineInput, center, scale);
 wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
                            coastline.projectedRingSizes().size(), coastline.svgPath);
 ```
