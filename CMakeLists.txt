@@ -23,7 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
     wrenium-f32math
     GIT_REPOSITORY https://github.com/wrenium/wrenium-f32math.git
-    GIT_TAG v0.1.1
+    GIT_TAG v0.2.0
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(wrenium-f32math)
