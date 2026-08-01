@@ -88,7 +88,17 @@ TEST_CASE("destinationPoint recovers the projection's own golden values")
 
         const GeoPoint actualTo = destinationPoint(from, c.expectedDistanceKm, bearing);
         CHECK(approxEqual(actualTo.latRad, expectedTo.latRad, kToleranceRad));
-        CHECK(approxEqual(actualTo.lonRad, expectedTo.lonRad, kToleranceRad));
+
+        // Longitude is undefined exactly at a pole ("90 deg north/south"):
+        // unrotate()'s general-path formula lands on an atan2(~0, ~0),
+        // whose result depends on the sign of each near-zero operand --
+        // platform/compiler-dependent (observed to differ between
+        // AppleClang and GCC/Linux-Clang), not a real formula bug, same
+        // class of degeneracy as bearingRad()'s at the coincident-point
+        // case above.
+        if (!approxEqual(std::fabs(expectedTo.latRad), kHalfPi, kToleranceRad)) {
+            CHECK(approxEqual(actualTo.lonRad, expectedTo.lonRad, kToleranceRad));
+        }
     }
 }
 
