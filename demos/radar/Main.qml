@@ -364,7 +364,6 @@ Window {
         repeat: true
         onTriggered: {
             const dtHours = (interval / 1000.0 / 3600.0) * root.kTimeScaleFactor
-            const earthR = wreniumGeoBridge.earthRadiusKm()
 
             for (let i = 0; i < targets.count; ++i) {
                 const item = targets.itemAt(i)
@@ -373,24 +372,18 @@ Window {
                 }
 
                 const distKm = item.speedKmh * dtHours
-                const bearingRad = item.bearingDeg * Math.PI / 180
-                const latRad = item.lat * Math.PI / 180
-                const cosLat = Math.max(0.05, Math.cos(latRad))
-                const dLatDeg = (distKm / earthR) * Math.cos(bearingRad) * 180 / Math.PI
-                const dLonDeg = (distKm / earthR) * Math.sin(bearingRad) / cosLat * 180 / Math.PI
+                const advanced = wreniumGeoBridge.destinationPoint(item.lat, item.lon, item.bearingDeg, distKm)
+                const newLat = advanced[0]
+                const newLon = advanced[1]
 
-                const newLat = item.lat + dLatDeg
-                const newLon = item.lon + dLonDeg
+                // Real spherical distance from center (not a flat-Earth
+                // approximation), only used to decide when to respawn a
+                // target that's flown out of coverage -- what actually
+                // gets drawn is still governed by projectPoint's own
+                // `visible` flag above.
+                const distFromCenterKm = wreniumGeoBridge.distanceKm(newLat, newLon, root.centerLatDeg, root.centerLonDeg)
 
-                // Rough flat-Earth distance from center, only used to
-                // decide when to respawn a target that's flown out of
-                // coverage -- what actually gets drawn is still governed
-                // by projectPoint's own `visible` flag above.
-                const dLatFromCenter = (newLat - root.centerLatDeg) * Math.PI / 180
-                const dLonFromCenter = (newLon - root.centerLonDeg) * Math.PI / 180 * cosLat
-                const approxDistKm = earthR * Math.sqrt(dLatFromCenter * dLatFromCenter + dLonFromCenter * dLonFromCenter)
-
-                if (approxDistKm > root.rangeKm * 1.15) {
+                if (distFromCenterKm > root.rangeKm * 1.15) {
                     // Lost off the edge of the scope -- respawn as a
                     // fresh contact entering coverage from a random
                     // bearing, heading generally back toward the center,
@@ -398,12 +391,10 @@ Window {
                     // every target eventually flying off scope for good.
                     const entryBearingDeg = Math.random() * 360
                     const entryDistKm = root.rangeKm * (0.85 + 0.1 * Math.random())
-                    const entryBearingRad = entryBearingDeg * Math.PI / 180
-                    const entryLatRad = root.centerLatDeg * Math.PI / 180
-                    const entryCosLat = Math.max(0.05, Math.cos(entryLatRad))
+                    const entryPoint = wreniumGeoBridge.destinationPoint(root.centerLatDeg, root.centerLonDeg, entryBearingDeg, entryDistKm)
 
-                    item.lat = root.centerLatDeg + (entryDistKm / earthR) * Math.cos(entryBearingRad) * 180 / Math.PI
-                    item.lon = root.centerLonDeg + (entryDistKm / earthR) * Math.sin(entryBearingRad) / entryCosLat * 180 / Math.PI
+                    item.lat = entryPoint[0]
+                    item.lon = entryPoint[1]
                     // Head back roughly toward the center (opposite of
                     // the entry bearing), with some spread so it doesn't
                     // fly a perfectly straight radial line every time.
