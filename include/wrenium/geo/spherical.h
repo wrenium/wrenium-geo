@@ -8,14 +8,15 @@
 #include "wrenium/geo/projection.h"
 
 /// @file
-/// Great-circle distance and initial bearing between two arbitrary
+/// Great-circle distance, bearing, and destination point for two arbitrary
 /// points -- general spherical trig, not tied to any projection or
-/// rendering pipeline. Built directly on azimuthal::rotate()'s own
-/// already-verified atan2-based (Vincenty-style) formula
-/// (detail/azimuthal/rotation.h): "distance and bearing from A to B" is
-/// exactly what rotate(B, A) already computes as its rotated-frame
-/// representation (rotatedLat = kHalfPi - centralAngle, rotatedLon =
-/// bearing), so this just reads that same result out in more familiar
+/// rendering pipeline. Built directly on azimuthal::rotate()/unrotate()'s
+/// own already-verified, pole-safe formulas (detail/azimuthal/rotation.h):
+/// "distance and bearing from A to B" is exactly what rotate(B, A) already
+/// computes as its rotated-frame representation (rotatedLat = kHalfPi -
+/// centralAngle, rotatedLon = bearing), and "the point at distance D,
+/// bearing B from A" is exactly unrotate()'s own inverse of that same
+/// representation -- this just reads those results out in more familiar
 /// units instead of re-deriving the same spherical trig a second time.
 
 namespace wrenium::geo {
@@ -45,6 +46,22 @@ inline float distanceKm(const GeoPoint &from, const GeoPoint &to) // NOLINT(bugp
 inline float bearingRad(const GeoPoint &from, const GeoPoint &to) // NOLINT(bugprone-easily-swappable-parameters)
 {
     return azimuthal::rotate(to, from).lonRad;
+}
+
+/// The point reached by travelling @p distanceKm along the great circle
+/// from @p origin at initial bearing @p bearingRad -- the inverse of
+/// distanceKm()/bearingRad(): destinationPoint(origin, distanceKm(origin,
+/// to), bearingRad(origin, to)) recovers @p to, up to this library's own
+/// float/trig approximation budget.
+/// @param origin The starting point.
+/// @param distanceKm Distance to travel, in kilometers.
+/// @param bearingRad Initial compass bearing, in radians -- same
+/// convention as bearingRad() above.
+/// @return The destination point.
+inline GeoPoint destinationPoint(const GeoPoint &origin, float distanceKm, float bearingRad) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    const float centralAngle = distanceKm / kEarthRadiusKm;
+    return azimuthal::unrotate(GeoPoint{kHalfPi - centralAngle, bearingRad}, origin);
 }
 
 } // namespace wrenium::geo
