@@ -63,9 +63,8 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
-    const wrenium::geo::Error pipelineErr = useOrthographic
-        ? wrenium::geo::azimuthal::projectRings<wrenium::geo::azimuthal::projectOrthographic>(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale)
-        : wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale);
+    const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    const wrenium::geo::Error pipelineErr = wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -114,9 +113,8 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
-    const wrenium::geo::Error pipelineErr = useOrthographic
-        ? wrenium::geo::azimuthal::projectLines<wrenium::geo::azimuthal::projectOrthographic>(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale)
-        : wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale);
+    const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    const wrenium::geo::Error pipelineErr = wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     if (pipelineErr != wrenium::geo::Error::Ok) {
         return QString();
     }
@@ -156,9 +154,8 @@ QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double cente
     // the SVG/binary path output puts the same location.
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
-    const wrenium::geo::azimuthal::ProjectedPoint projected = useOrthographic
-        ? wrenium::geo::azimuthal::projectPoint<wrenium::geo::azimuthal::projectOrthographic>(rawPoint, center, viewport.clipRadiusRad, viewport.scale)
-        : wrenium::geo::azimuthal::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale);
+    const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    const wrenium::geo::azimuthal::ProjectedPoint projected = wrenium::geo::azimuthal::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale, projectionType);
 
     if (!projected.visible) {
         return {0.0, 0.0, false};

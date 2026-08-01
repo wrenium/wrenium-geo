@@ -25,17 +25,31 @@
 
 namespace wrenium::geo::azimuthal {
 
-/// Rotates -> clips -> projects @p input's closed coastline-style rings
-/// into @p workspace (already loaded via loadInputGeometry() (input_format.h),
-/// for example). Read the result back via `workspace.projectedPoints()` /
-/// `workspace.projectedRingSizes()` (or `workspace.projectedPoint()` for a
-/// single point), for the emitters or a caller's own code to consume.
-///
-/// @p input's own capacities (InputMaxPoints/InputMaxRings) are
-/// deliberately independent template parameters from the workspace's
-/// MaxPoints/MaxRings -- a fixed input dataset (the converter's checked-in
-/// world coastline data, for example) may be loaded into workspaces of
-/// different budgets.
+/// Selects which radial-distance formula projectRings()/projectLines()/
+/// projectPoint() apply after rotate/clip -- a runtime value, not a
+/// template parameter: every real caller (the Qt bridge's useOrthographic
+/// toggle, for example) picks this at runtime, not at compile time, so a
+/// template parameter here would only add syntax without reflecting how
+/// the choice is actually made. Each projectionType's own per-point work stays
+/// fully templated internally (see detail::projectRings() etc. below) --
+/// this only costs one branch per call, not per point.
+enum class ProjectionType
+{
+    Equidistant,  ///< True distance/bearing preserved from center (equidistant.h).
+    Orthographic, ///< Rendered as if viewed from infinity; horizon at 90 degrees (orthographic.h).
+};
+
+namespace detail {
+
+/// The actual per-projectionType rotate -> clip -> project implementation,
+/// templated on the radial-distance formula for zero-overhead inlining
+/// over every point in @p input -- not meant to be called directly.
+/// projectRings() (below, no `detail::`) dispatches to one instantiation
+/// of this per call, based on its own runtime ProjectionType parameter; both
+/// instantiations exist in the binary (one per projectionType actually used),
+/// but each is exactly as tightly inlined as if ProjectFn had been
+/// chosen at compile time, because from this function's own point of
+/// view, it still is.
 /// @param workspace The Workspace to clip/project into.
 /// @param input The loaded ring geometry, from loadInputGeometry() for example.
 /// @param center The projection center (lat/lon, radians).
@@ -43,10 +57,7 @@ namespace wrenium::geo::azimuthal {
 /// whatever "zoom preset" unit the caller's own code uses, for example
 /// `clipRadiusKm / kEarthRadiusKm`.
 /// @param scale Output units per kilometer.
-/// @tparam ProjectFn Radial-distance formula applied after rotate/clip --
-/// defaults to azimuthal::project (equidistant.h); pass
-/// azimuthal::projectOrthographic (orthographic.h) for the horizon-limited
-/// "viewed from space" variant instead.
+/// @tparam ProjectFn Radial-distance formula applied after rotate/clip.
 /// @return Error::Ok on success, or Error::CapacityExceeded if the result
 /// doesn't fit in @p workspace.
 // clipRadiusRad/scale are documented and always passed in this order
@@ -54,7 +65,7 @@ namespace wrenium::geo::azimuthal {
 // azimuthal projectX function shares it deliberately, so reordering one
 // alone would be its own hazard.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project, std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <Point (*ProjectFn)(const GeoPoint &, float), std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
@@ -205,25 +216,11 @@ inline Error projectRings(
     return Error::Ok;
 }
 
-/// Border-line counterpart to @ref projectRings(): rotate -> clip -> project
-/// over the same kind of Workspace, but for *open* polyline data (country
-/// border segments, for example) rather than closed coastline rings.
-/// Deliberately a separate function, not a mode flag on @ref projectRings() --
-/// border data has no inside/outside concept at all.
-/// Callers are expected to use a Workspace instance of their own,
-/// independent from the one used for coastline data.
-/// @param workspace The Workspace to clip/project into.
-/// @param input The loaded line geometry, from loadInputGeometry() for example.
-/// @param center The projection center (lat/lon, radians).
-/// @param clipRadiusRad Clip radius in radians (angular).
-/// @param scale Output units per kilometer.
-/// @tparam ProjectFn Radial-distance formula applied after rotate/clip --
-/// see @ref projectRings()'s identical parameter.
-/// @return Error::Ok on success, or Error::CapacityExceeded if the result
-/// doesn't fit in @p workspace.
-// See projectRings's identical parameter pair and NOLINT rationale above.
+/// Border-line counterpart to @ref projectRings(): see its own comment --
+/// not meant to be called directly.
+// See detail::projectRings's identical parameter pair and NOLINT rationale above.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project, std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <Point (*ProjectFn)(const GeoPoint &, float), std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
     Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
@@ -301,6 +298,92 @@ inline Error projectLines(
     return Error::Ok;
 }
 
+/// projectPoint()'s actual implementation -- see its own comment; not
+/// meant to be called directly.
+template <Point (*ProjectFn)(const GeoPoint &, float)>
+inline Point projectPoint(const GeoPoint &rotated, float scale) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    return ProjectFn(rotated, scale);
+}
+
+} // namespace detail
+
+/// Rotates -> clips -> projects @p input's closed coastline-style rings
+/// into @p workspace (already loaded via loadInputGeometry() (input_format.h),
+/// for example). Read the result back via `workspace.projectedPoints()` /
+/// `workspace.projectedRingSizes()` (or `workspace.projectedPoint()` for a
+/// single point), for the emitters or a caller's own code to consume.
+///
+/// @p input's own capacities (InputMaxPoints/InputMaxRings) are
+/// deliberately independent template parameters from the workspace's
+/// MaxPoints/MaxRings -- a fixed input dataset (the converter's checked-in
+/// world coastline data, for example) may be loaded into workspaces of
+/// different budgets.
+/// @param workspace The Workspace to clip/project into.
+/// @param input The loaded ring geometry, from loadInputGeometry() for example.
+/// @param center The projection center (lat/lon, radians).
+/// @param clipRadiusRad Clip radius in radians (angular) -- convert from
+/// whatever "zoom preset" unit the caller's own code uses, for example
+/// `clipRadiusKm / kEarthRadiusKm`.
+/// @param scale Output units per kilometer.
+/// @param projectionType Radial-distance formula applied after rotate/clip.
+/// Costs one branch for the whole call, not per point -- the per-point
+/// work stays exactly as templated/inlined as a compile-time choice would
+/// give (see detail::projectRings() above).
+/// @return Error::Ok on success, or Error::CapacityExceeded if the result
+/// doesn't fit in @p workspace.
+// clipRadiusRad/scale/projectionType are documented and always passed in this
+// order across every call site in this codebase; every azimuthal
+// projectX function shares it deliberately, so reordering one alone
+// would be its own hazard.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
+template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+inline Error projectRings(
+    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    const InputGeometry<InputMaxPoints, InputMaxRings> &input,
+    const GeoPoint &center,
+    float clipRadiusRad,
+    float scale,
+    ProjectionType projectionType)
+// NOLINTEND(bugprone-easily-swappable-parameters)
+{
+    return projectionType == ProjectionType::Orthographic
+        ? detail::projectRings<azimuthal::projectOrthographic>(workspace, input, center, clipRadiusRad, scale)
+        : detail::projectRings<azimuthal::projectEquidistant>(workspace, input, center, clipRadiusRad, scale);
+}
+
+/// Border-line counterpart to @ref projectRings(): rotate -> clip -> project
+/// over the same kind of Workspace, but for *open* polyline data (country
+/// border segments, for example) rather than closed coastline rings.
+/// Deliberately a separate function, not a mode flag on @ref projectRings() --
+/// border data has no inside/outside concept at all.
+/// Callers are expected to use a Workspace instance of their own,
+/// independent from the one used for coastline data.
+/// @param workspace The Workspace to clip/project into.
+/// @param input The loaded line geometry, from loadInputGeometry() for example.
+/// @param center The projection center (lat/lon, radians).
+/// @param clipRadiusRad Clip radius in radians (angular).
+/// @param scale Output units per kilometer.
+/// @param projectionType See @ref projectRings()'s identical parameter.
+/// @return Error::Ok on success, or Error::CapacityExceeded if the result
+/// doesn't fit in @p workspace.
+// See projectRings's identical parameter pair and NOLINT rationale above.
+// NOLINTBEGIN(bugprone-easily-swappable-parameters)
+template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+inline Error projectLines(
+    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    const InputGeometry<InputMaxPoints, InputMaxRings> &input,
+    const GeoPoint &center,
+    float clipRadiusRad,
+    float scale,
+    ProjectionType projectionType)
+// NOLINTEND(bugprone-easily-swappable-parameters)
+{
+    return projectionType == ProjectionType::Orthographic
+        ? detail::projectLines<azimuthal::projectOrthographic>(workspace, input, center, clipRadiusRad, scale)
+        : detail::projectLines<azimuthal::projectEquidistant>(workspace, input, center, clipRadiusRad, scale);
+}
+
 /// A single projected point and whether it fell inside the clip circle.
 struct ProjectedPoint
 {
@@ -323,14 +406,13 @@ struct ProjectedPoint
 /// @param center The projection center (lat/lon, radians).
 /// @param clipRadiusRad Clip radius in radians (angular).
 /// @param scale Output units per kilometer.
-/// @tparam ProjectFn Radial-distance formula applied after rotate/clip --
-/// must match whatever @ref projectRings() / @ref projectLines() call was used for the
-/// same map, or marker positions won't line up. See @ref projectRings()'s
-/// identical parameter.
+/// @param projectionType Radial-distance formula applied after rotate/clip --
+/// must match whatever @ref projectRings() / @ref projectLines() call was
+/// used for the same map, or marker positions won't line up. See
+/// @ref projectRings()'s identical parameter.
 /// @return The projected point and its visibility.
 // See projectRings's identical parameter pair and NOLINT rationale above.
-template <Point (*ProjectFn)(const GeoPoint &, float) = azimuthal::project>
-inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &center, float clipRadiusRad, float scale) // NOLINT(bugprone-easily-swappable-parameters)
+inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &center, float clipRadiusRad, float scale, ProjectionType projectionType) // NOLINT(bugprone-easily-swappable-parameters)
 {
     ProjectedPoint result;
     result.point = Point{};
@@ -347,7 +429,9 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
     }
 
     result.visible = true;
-    result.point = ProjectFn(rotated, scale);
+    result.point = projectionType == ProjectionType::Orthographic
+        ? detail::projectPoint<azimuthal::projectOrthographic>(rotated, scale)
+        : detail::projectPoint<azimuthal::projectEquidistant>(rotated, scale);
     return result;
 }
 

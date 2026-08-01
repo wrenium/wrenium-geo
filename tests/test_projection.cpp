@@ -19,7 +19,7 @@ namespace {
 
 // This library's trig (wrenium-f32math) trades precision for speed --
 // its atan2 carries up to ~6e-4 rad of error, dominating the rotate()/
-// project() error budget here (float rounding alone would be several
+// projectEquidistant() error budget here (float rounding alone would be several
 // orders tighter). At the ~10,000-20,000 km magnitudes these cases
 // produce, that's up to ~6e-4 * kEarthRadiusKm =~ 3.8 km -- 5 km is a
 // margin over that, generous enough to absorb the approximation while
@@ -54,7 +54,7 @@ TEST_CASE("rotate + project match hand-derived golden values")
         CHECK(approxEqual(distanceKm, c.expectedDistanceKm, kToleranceKm));
 
         if (c.checkBearingAndXY) {
-            const Point projected = project(rotated, 1.0f);
+            const Point projected = projectEquidistant(rotated, 1.0f);
             CHECK(approxEqual(projected.x, c.expectedX, kToleranceKm));
             CHECK(approxEqual(projected.y, c.expectedY, kToleranceKm));
         }
@@ -65,7 +65,7 @@ TEST_CASE("center == point projects to the origin regardless of scale")
 {
     GeoPoint center{0.9f, -1.4f};
     const GeoPoint rotated = rotate(center, center);
-    const Point projected = project(rotated, 42.0f);
+    const Point projected = projectEquidistant(rotated, 42.0f);
     CHECK(approxEqual(projected.x, 0.0f, 0.001f));
     CHECK(approxEqual(projected.y, 0.0f, 0.001f));
 }
@@ -80,7 +80,7 @@ TEST_CASE("projected radius is exactly distanceKm * scale (azimuthal equidistant
 
     const float scales[] = {0.01f, 1.0f, 4.5f, 100.0f};
     for (float scale : scales) {
-        const Point projected = project(rotated, scale);
+        const Point projected = projectEquidistant(rotated, scale);
         const float radius = std::sqrt(projected.x * projected.x + projected.y * projected.y);
         const float expectedRadius = distanceKm * scale;
         // Tolerance scales with the output magnitude since `scale` can

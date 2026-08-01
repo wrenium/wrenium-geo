@@ -112,7 +112,7 @@ TEST_CASE("A Workspace's point capacity overflowing via the pipeline reports Err
     pushSingleRingLatBounds(input.points, input.ringMinLat, input.ringMaxLat);
 
     GeoPoint center{0.0f, 0.0f};
-    const Error err = projectRings(workspace, input, center, 1.0f, 1.0f);
+    const Error err = projectRings(workspace, input, center, 1.0f, 1.0f, ProjectionType::Equidistant);
 
     CHECK(err == Error::CapacityExceeded);
     // The workspace itself must not have been left in a corrupted
@@ -150,7 +150,7 @@ TEST_CASE("A Workspace's ring capacity overflowing reports Error::CapacityExceed
     }
 
     GeoPoint center{0.0f, 0.0f};
-    const Error err = projectRings(workspace, input, center, 1.0f, 1.0f);
+    const Error err = projectRings(workspace, input, center, 1.0f, 1.0f, ProjectionType::Equidistant);
 
     CHECK(err == Error::CapacityExceeded);
     CHECK(workspace.ringSizesB.size() <= workspace.ringSizesB.capacity());
@@ -180,7 +180,7 @@ TEST_CASE("A ring bigger than Workspace's MaxRingPoints reports Error::CapacityE
     pushSingleRingLatBounds(input.points, input.ringMinLat, input.ringMaxLat);
 
     GeoPoint center{0.0f, 0.0f};
-    const Error err = projectRings(workspace, input, center, 1.0f, 1.0f);
+    const Error err = projectRings(workspace, input, center, 1.0f, 1.0f, ProjectionType::Equidistant);
 
     CHECK(err == Error::CapacityExceeded);
 }

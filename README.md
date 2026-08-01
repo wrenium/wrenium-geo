@@ -22,8 +22,8 @@ anywhere in the library.
   `azimuthal_pipeline.h`): rotates the sphere so that center point becomes
   the pole, clips coastline/border data down to a configurable radius
   around it, then projects what's left with a closed-form radial-distance
-  formula. Selected via the `ProjectFn` template parameter (defaults to
-  equidistant): **equidistant** (true distance and bearing from the
+  formula. Selected via a `ProjectionType` argument (no default -- always passed
+  explicitly): **equidistant** (true distance and bearing from the
   center point are preserved exactly) and **orthographic** (renders as if
   viewed from infinitely far away -- the disk edge is the horizon; only
   meaningful up to a 90 degree clip radius).
@@ -214,7 +214,7 @@ const float clipRadiusRad = clipRadiusKm / wrenium::geo::kEarthRadiusKm;
 const float scale = viewportRadiusPx / clipRadiusKm; // output units per km
 
 // Rotate -> clip -> project every coastline ring, writing the result into coastline.
-wrenium::geo::azimuthal::projectRings(coastline, coastlineInput, center, clipRadiusRad, scale);
+wrenium::geo::azimuthal::projectRings(coastline, coastlineInput, center, clipRadiusRad, scale, wrenium::geo::azimuthal::ProjectionType::Equidistant);
 
 // Read the result back out as an SVG path `d` string.
 wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
@@ -223,16 +223,14 @@ wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSi
 // coastline.svgPath now holds "M x,y L x,y ... Z" path data, ready to draw.
 ```
 
-To use the orthographic projection instead, pass `projectOrthographic` as
-`azimuthal::projectRings`/`projectLines`/`projectPoint`'s `ProjectFn`
-template argument (each call site picks independently, but must agree
-across a single map or the layers won't line up):
+To use the orthographic projection instead, pass `ProjectionType::Orthographic`
+to `azimuthal::projectRings`/`projectLines`/`projectPoint` (each call
+site picks independently, but must agree across a single map or the
+layers won't line up):
 
 ```cpp
-#include <wrenium/geo/detail/azimuthal/orthographic.h>
-
-wrenium::geo::azimuthal::projectRings<wrenium::geo::azimuthal::projectOrthographic>(
-    coastline, coastlineInput, center, clipRadiusRad, scale);
+wrenium::geo::azimuthal::projectRings(
+    coastline, coastlineInput, center, clipRadiusRad, scale, wrenium::geo::azimuthal::ProjectionType::Orthographic);
 ```
 
 ### Mercator

@@ -819,7 +819,7 @@ inline Error clipLineToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
 /// inside one of them).
 ///
 /// Deliberately tested directly in raw (lat, lon) space, not via
-/// rotate()+project(): projecting first is numerically unstable for points
+/// rotate()+projectEquidistant(): projecting first is numerically unstable for points
 /// near @p center's antipode, which corrupts the ray-cast parity. Standard
 /// even-odd ray-casting point-in-polygon test (ray cast due north from
 /// @p center), matching the OddEvenFill rule the SVG/binary output uses.

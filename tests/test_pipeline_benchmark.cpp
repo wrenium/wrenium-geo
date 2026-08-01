@@ -71,7 +71,7 @@ TEST_CASE("full pipeline over a few thousand points stays well clear of an O(n^2
     const float clipRadiusRad = 1.0f; // wide enough that plenty survives clipping
 
     const auto start = std::chrono::steady_clock::now();
-    const Error err = projectRings(workspace, input, center, clipRadiusRad, 1.0f);
+    const Error err = projectRings(workspace, input, center, clipRadiusRad, 1.0f, ProjectionType::Equidistant);
     const auto afterPipeline = std::chrono::steady_clock::now();
 
     REQUIRE(err == Error::Ok);

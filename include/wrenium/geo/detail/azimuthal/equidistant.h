@@ -14,8 +14,8 @@
 /// (x, y) where radius is directly proportional to true angular distance
 /// from center. This is the one piece that's specific to this particular
 /// azimuthal variant -- a different one (stereographic, orthographic,
-/// equal-area, ...) would replace just project() with its own radial
-/// formula and reuse rotation.h unchanged.
+/// equal-area, ...) would replace just projectEquidistant() with its own
+/// radial formula and reuse rotation.h unchanged.
 
 namespace wrenium::geo::azimuthal {
 
@@ -26,7 +26,7 @@ namespace wrenium::geo::azimuthal {
 /// distanceKm * scale, so a caller can reproduce this same formula for
 /// range rings, ticks, etc. using the same @p scale value.
 /// @return The planar (x, y) projection.
-inline Point project(const GeoPoint &rotatedPoint, float scale)
+inline Point projectEquidistant(const GeoPoint &rotatedPoint, float scale)
 {
     const float centralAngle = kHalfPi - rotatedPoint.latRad;
     const float bearing = rotatedPoint.lonRad;
