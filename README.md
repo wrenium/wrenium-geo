@@ -41,6 +41,9 @@ anywhere in the library.
 - **Two output formats**: an SVG path `d` string, or a compact tagged-float
   binary stream (magic + version header, little-endian) -- see
   `common/binary_path_decoder_example` for a reference decoder.
+- **Great-circle distance and bearing** between any two points
+  (`wrenium::geo::distanceKm`/`bearingRad`, `spherical.h`) -- general
+  spherical trig, independent of any projection or clip radius.
 - **TopoJSON converter** (`topojson2bin`, in `tools/wrenium_geo_convert`) turns
   [world-atlas](https://github.com/topojson/world-atlas) TopoJSON data into
   the library's own binary input-geometry format, output as both a raw
@@ -72,6 +75,25 @@ looks continent-sized). Not centered on an arbitrary point via rotation
 like the azimuthal pair; it's a whole-world cylindrical projection with
 its own pipeline (`cylindrical::projectRings`/`projectLines`, see the
 "Mercator" section below).
+
+## Spherical distance and bearing
+
+`distanceKm`/`bearingRad` (`spherical.h`) compute the great-circle distance
+and initial compass bearing between any two `GeoPoint`s directly -- not tied
+to a projection, clip radius, or `scale`:
+
+```cpp
+#include <wrenium/geo/spherical.h>
+
+const wrenium::geo::GeoPoint here = wrenium::geo::makeGeoPoint(60.0f, 25.0f);
+const wrenium::geo::GeoPoint there = wrenium::geo::makeGeoPoint(51.5f, -0.1f);
+
+const float km = wrenium::geo::distanceKm(here, there);
+const float bearingRad = wrenium::geo::bearingRad(here, there);
+```
+
+Bearing uses the same convention (0 = north, increasing clockwise) as every
+projection formula in this library.
 
 ## Terminology
 
