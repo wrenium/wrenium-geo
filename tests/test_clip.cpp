@@ -588,13 +588,13 @@ TEST_CASE("clipLineToSink: sink overflow is reported as Error::CapacityExceeded,
     CHECK(output.size() == output.capacity());
 }
 
-// ---- detail::unrotate: pole singularity regression ----
+// ---- unrotate: pole singularity regression ----
 //
 // When center is exactly at a pole, unrotate()'s general formula hits a
-// singularity (see detail/azimuthal/clip.h's own comment) and can return the wrong
-// longitude by 180 degrees. Since clipRingToSink relies on this function
-// for its single rejoin anchor point, that error flips every crossing's
-// inside/outside assignment for the whole ring.
+// singularity (see detail/azimuthal/rotation.h's own comment) and can
+// return the wrong longitude by 180 degrees. Since clipRingToSink relies
+// on this function for its single rejoin anchor point, that error flips
+// every crossing's inside/outside assignment for the whole ring.
 TEST_CASE("clip: unrotate recovers the correct longitude when center is exactly at the north pole (real bug regression)")
 {
     const float degToRad = kPi / 180.0f;
@@ -604,7 +604,7 @@ TEST_CASE("clip: unrotate recovers the correct longitude when center is exactly 
     // The exact reference point clipRingToSink's anchor fact uses: bearing
     // 0, at the clip radius.
     const GeoPoint rotated{kHalfPi - clipRadiusRad, 0.0f};
-    const GeoPoint raw = azimuthal::detail::unrotate(rotated, center);
+    const GeoPoint raw = azimuthal::unrotate(rotated, center);
 
     // At the north pole, every point at the same central angle shares the
     // same colatitude regardless of bearing.
@@ -634,8 +634,8 @@ TEST_CASE("clip: unrotate stays correct across several bearings at both poles, m
         for (const float bearingDeg : {0.0f, 45.0f, 90.0f, 180.0f, 270.0f}) {
             const GeoPoint rotated{kHalfPi - clipRadiusRad, bearingDeg * degToRad};
 
-            const GeoPoint atPole = azimuthal::detail::unrotate(rotated, centerAtPole);
-            const GeoPoint nearPole = azimuthal::detail::unrotate(rotated, centerNearPole);
+            const GeoPoint atPole = azimuthal::unrotate(rotated, centerAtPole);
+            const GeoPoint nearPole = azimuthal::unrotate(rotated, centerNearPole);
 
             CAPTURE(centerLatDeg);
             CAPTURE(bearingDeg);

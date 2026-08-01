@@ -306,6 +306,14 @@ inline Point projectPoint(const GeoPoint &rotated, float scale) // NOLINT(bugpro
     return ProjectFn(rotated, scale);
 }
 
+/// unproject()'s actual implementation -- see its own comment; not meant
+/// to be called directly.
+template <GeoPoint (*UnprojectFn)(const Point &, float)>
+inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scale)
+{
+    return azimuthal::unrotate(UnprojectFn(point, scale), center);
+}
+
 } // namespace detail
 
 /// Rotates -> clips -> projects @p input's closed coastline-style rings
@@ -433,6 +441,33 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
         ? detail::projectPoint<azimuthal::projectOrthographic>(rotated, scale)
         : detail::projectPoint<azimuthal::projectEquidistant>(rotated, scale);
     return result;
+}
+
+/// Inverse of #projectPoint (and, unclipped, of projectEquidistant() itself):
+/// given a planar output point and the same (center, scale) it was
+/// projected with, recovers the geo point -- no visibility/clip-circle
+/// test, since the caller's own point (e.g. a screen click) already tells
+/// them whether it's within the rendered area; this just answers "what
+/// geo point is there."
+///
+/// Composes the radial-distance formula's own inverse with unrotate()
+/// (rotation.h) -- the exact mirror of how #projectPoint composes its own
+/// forward formula with rotate(). @p projectionType must match whatever
+/// projectionType #projectRings() / #projectLines() / #projectPoint() was
+/// called with for this same map, or the result won't correspond to what
+/// was actually rendered.
+/// @param point The planar point to invert (same coordinate space
+/// #projectPoint()'s return value uses).
+/// @param center See #projectPoint()'s identical parameter.
+/// @param scale Output units per kilometer -- must match whatever the
+/// point was originally projected with.
+/// @param projectionType See #projectRings()'s identical parameter.
+/// @return The geo point that this same @p projectionType/rotate() would map to @p point.
+inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scale, ProjectionType projectionType) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    return projectionType == ProjectionType::Orthographic
+        ? detail::unproject<azimuthal::unprojectOrthographic>(point, center, scale)
+        : detail::unproject<azimuthal::unprojectEquidistant>(point, center, scale);
 }
 
 } // namespace wrenium::geo::azimuthal
