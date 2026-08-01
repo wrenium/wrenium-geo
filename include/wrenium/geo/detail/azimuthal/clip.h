@@ -150,66 +150,6 @@ inline Error emitBoundaryArc(float fromLonRad, float toLonRad, int direction, fl
     return Error::Ok;
 }
 
-// Inverse of rotate(): given a point already expressed in the rotated
-// frame (as if `center` were the pole), recovers its raw (lat, lon).
-// Needed only for clipRingToSink's single reference-point anchor fact --
-// nowhere else in the library goes backwards from rotated to raw space.
-// sinLat is clamped to [-1, 1] before asinf() as a float-precision
-// safety margin (mathematically always in range, but rounding can push it
-// a hair outside).
-//
-// Special-cased within ~0.006 degrees of either pole: there, cosCenterLat
-// is ~0, which drives both atan2f arguments in the general formula toward
-// 0 simultaneously -- the result then depends on the sign of two
-// near-zero rounding residuals, an exact +-180 degree longitude error
-// (this anchor point feeds clipRingToSink's whole rejoin alternation, so
-// that error flips every crossing's inside/outside assignment for the
-// ring). Bypassed with the closed-form limit the general formula
-// converges to at a pole instead (the north/south cases genuinely differ
-// in sign/offset, not just a mirrored copy-paste).
-inline GeoPoint unrotate(const GeoPoint &rotated, const GeoPoint &center)
-{
-    const float centralAngle = kHalfPi - rotated.latRad;
-    const float bearing = rotated.lonRad;
-
-    float sinCenterLat, cosCenterLat;
-    f32math::sincos(center.latRad, sinCenterLat, cosCenterLat);
-
-    constexpr float kPoleCosEpsilon = 1e-4f;
-    if (cosCenterLat > -kPoleCosEpsilon && cosCenterLat < kPoleCosEpsilon) {
-        const bool northPole = sinCenterLat > 0.0f;
-        GeoPoint result;
-        result.latRad = northPole ? (kHalfPi - centralAngle) : (centralAngle - kHalfPi);
-        result.lonRad = center.lonRad + (northPole ? (kPi - bearing) : bearing);
-        while (result.lonRad > kPi) {
-            result.lonRad -= 2.0f * kPi;
-        }
-        while (result.lonRad <= -kPi) {
-            result.lonRad += 2.0f * kPi;
-        }
-        return result;
-    }
-
-    float sinAngle, cosAngle;
-    f32math::sincos(centralAngle, sinAngle, cosAngle);
-    float sinBearing, cosBearing;
-    f32math::sincos(bearing, sinBearing, cosBearing);
-
-    float sinLat = sinCenterLat * cosAngle + cosCenterLat * sinAngle * cosBearing;
-    if (sinLat > 1.0f) {
-        sinLat = 1.0f;
-    } else if (sinLat < -1.0f) {
-        sinLat = -1.0f;
-    }
-    const float lat = f32math::asin(sinLat);
-    const float lon = center.lonRad + f32math::atan2(sinBearing * sinAngle * cosCenterLat, cosAngle - sinCenterLat * sinLat);
-
-    GeoPoint result;
-    result.latRad = lat;
-    result.lonRad = lon;
-    return result;
-}
-
 // Traces the *entire* clip circle boundary (every bearing), not just an arc
 // between an exit and entry -- used by isCenterEnclosedByRings's caller
 // (projectRings(), azimuthal_pipeline.h) for the case where clipping finds
@@ -507,11 +447,11 @@ inline Error clipRingToSink(const GeoPoint *rawPoints, std::size_t pointCount, c
     }
 
     // Is the reference point (on the clip boundary, at refBearing) inside
-    // the ring? Raw-lat/lon ray-cast via detail::unrotate to recover
-    // the reference point's raw position -- same technique as
+    // the ring? Raw-lat/lon ray-cast via unrotate() (rotation.h) to
+    // recover the reference point's raw position -- same technique as
     // isCenterEnclosedByRings below. `threshold` computed once, above.
     const GeoPoint refRotated{threshold, refBearing};
-    const GeoPoint refRaw = detail::unrotate(refRotated, center);
+    const GeoPoint refRaw = unrotate(refRotated, center);
 
     bool refInsideRing;
     {

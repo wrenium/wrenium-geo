@@ -5,6 +5,7 @@
 
 #include <cmath>
 
+#include "wrenium/f32math/asin.h"
 #include "wrenium/f32math/atan2.h"
 #include "wrenium/f32math/trig.h"
 #include "wrenium/geo/geo_point.h"
@@ -16,10 +17,14 @@
 /// which is just one such formula. rotate() re-expresses a sphere point
 /// relative to an arbitrary center as if that center were the north pole;
 /// clip.h's clip test and any azimuthal radial-distance formula both build
-/// on top of this same rotated representation. A different azimuthal
-/// variant (stereographic, orthographic, equal-area, ...) would reuse
-/// rotate()/RotationFrame unchanged and only need its own radial-distance
-/// formula alongside equidistant.h, not a different rotation step.
+/// on top of this same rotated representation. unrotate() is its exact
+/// inverse -- rotated space back to raw (lat, lon) -- and is what
+/// azimuthal_pipeline.h's own unproject() builds on, the same way rotate()
+/// underpins projectEquidistant(). A different azimuthal variant (stereographic,
+/// orthographic, equal-area, ...) would reuse rotate()/unrotate()/
+/// RotationFrame unchanged and only need its own radial-distance formula
+/// (and that formula's own inverse) alongside equidistant.h, not a
+/// different rotation step.
 ///
 /// rotate()'s returned GeoPoint's latRad is kHalfPi at the center itself,
 /// decreasing with true angular distance from it; its lonRad is the
@@ -148,6 +153,67 @@ inline GeoPoint rotate(const GeoPoint &point, const RotationFrame &frame)
 inline GeoPoint rotate(const GeoPoint &point, const GeoPoint &center)
 {
     return rotate(point, makeRotationFrame(center));
+}
+
+/// Inverse of rotate(): given a point already expressed in the rotated
+/// frame (as if `center` were the pole), recovers its raw (lat, lon).
+/// Used both by clip.h's own reference-point anchor fact and by
+/// azimuthal_pipeline.h's unproject() (the public "screen point back to
+/// geo point" operation). sinLat is clamped to [-1, 1] before asinf() as
+/// a float-precision safety margin (mathematically always in range, but
+/// rounding can push it a hair outside).
+///
+/// Special-cased within ~0.006 degrees of either pole: there, cosCenterLat
+/// is ~0, which drives both atan2f arguments in the general formula toward
+/// 0 simultaneously -- the result then depends on the sign of two
+/// near-zero rounding residuals, an exact +-180 degree longitude error.
+/// Bypassed with the closed-form limit the general formula converges to
+/// at a pole instead (the north/south cases genuinely differ in
+/// sign/offset, not just a mirrored copy-paste).
+/// @param rotated A point already expressed relative to @p center (e.g. via rotate()).
+/// @param center The projection center @p rotated is expressed relative to.
+/// @return @p rotated's raw (lat, lon).
+inline GeoPoint unrotate(const GeoPoint &rotated, const GeoPoint &center)
+{
+    const float centralAngle = kHalfPi - rotated.latRad;
+    const float bearing = rotated.lonRad;
+
+    float sinCenterLat, cosCenterLat;
+    f32math::sincos(center.latRad, sinCenterLat, cosCenterLat);
+
+    constexpr float kPoleCosEpsilon = 1e-4f;
+    if (cosCenterLat > -kPoleCosEpsilon && cosCenterLat < kPoleCosEpsilon) {
+        const bool northPole = sinCenterLat > 0.0f;
+        GeoPoint result;
+        result.latRad = northPole ? (kHalfPi - centralAngle) : (centralAngle - kHalfPi);
+        result.lonRad = center.lonRad + (northPole ? (kPi - bearing) : bearing);
+        while (result.lonRad > kPi) {
+            result.lonRad -= 2.0f * kPi;
+        }
+        while (result.lonRad <= -kPi) {
+            result.lonRad += 2.0f * kPi;
+        }
+        return result;
+    }
+
+    float sinAngle, cosAngle;
+    f32math::sincos(centralAngle, sinAngle, cosAngle);
+    float sinBearing, cosBearing;
+    f32math::sincos(bearing, sinBearing, cosBearing);
+
+    float sinLat = sinCenterLat * cosAngle + cosCenterLat * sinAngle * cosBearing;
+    if (sinLat > 1.0f) {
+        sinLat = 1.0f;
+    } else if (sinLat < -1.0f) {
+        sinLat = -1.0f;
+    }
+    const float lat = f32math::asin(sinLat);
+    const float lon = center.lonRad + f32math::atan2(sinBearing * sinAngle * cosCenterLat, cosAngle - sinCenterLat * sinLat);
+
+    GeoPoint result;
+    result.latRad = lat;
+    result.lonRad = lon;
+    return result;
 }
 
 } // namespace wrenium::geo::azimuthal

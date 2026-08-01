@@ -206,3 +206,72 @@ TEST_CASE("projectPoint: ProjectionType::Orthographic selects a different radial
     // rather than silently falling back to equidistant.
     CHECK(orthographicResult.point.x != doctest::Approx(equidistantResult.point.x).epsilon(1e-4));
 }
+
+TEST_CASE("unproject: exact inverse of projectEquidistant")
+{
+    const GeoPoint centers[] = {
+        GeoPoint{0.0f, 0.0f},
+        GeoPoint{0.6f, 1.0f},
+        GeoPoint{-0.4f, -2.5f},
+    };
+    const float bearings[] = {0.0f, 0.7f, kHalfPi, kPi - 0.1f, -1.5f};
+    const float distancesRad[] = {0.0f, 0.05f, 0.2f, 0.6f};
+    const float scales[] = {0.5f, 1.0f, 3.0f};
+
+    for (const GeoPoint &center : centers) {
+        for (const float bearing : bearings) {
+            for (const float distanceRad : distancesRad) {
+                for (const float scale : scales) {
+                    CAPTURE(center.latRad);
+                    CAPTURE(bearing);
+                    CAPTURE(distanceRad);
+                    CAPTURE(scale);
+                    const GeoPoint raw = destinationPoint(center, distanceRad, bearing);
+                    const Point projected = projectEquidistant(rotate(raw, center), scale);
+                    const GeoPoint recovered = unproject(projected, center, scale, ProjectionType::Equidistant);
+
+                    // Skip the bearing-is-undefined case (distance 0 --
+                    // recovered.lonRad can legitimately be anything).
+                    if (distanceRad > 1e-6f) {
+                        CHECK(recovered.lonRad == doctest::Approx(raw.lonRad).epsilon(1e-2));
+                    }
+                    CHECK(recovered.latRad == doctest::Approx(raw.latRad).epsilon(1e-2));
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE("unproject: exact inverse of projectOrthographic")
+{
+    const GeoPoint center{0.3f, -0.8f};
+    const float scale = 1.5f;
+    const GeoPoint raw = destinationPoint(center, 30.0f * kPi / 180.0f, 1.1f);
+
+    const Point projected = projectOrthographic(rotate(raw, center), scale);
+    const GeoPoint recovered = unproject(projected, center, scale, ProjectionType::Orthographic);
+
+    CHECK(recovered.latRad == doctest::Approx(raw.latRad).epsilon(1e-2));
+    CHECK(recovered.lonRad == doctest::Approx(raw.lonRad).epsilon(1e-2));
+}
+
+TEST_CASE("unproject: orthographic saturates towards the horizon for a click past the rendered disk")
+{
+    // A click outside the rendered orthographic disk (radius
+    // kEarthRadiusKm * scale) must not hit asin()'s undefined behavior
+    // outside its domain -- unprojectOrthographic clamps sinCentralAngle
+    // to 1 first (see its own comment), so this should saturate to
+    // exactly the horizon (centralAngle == kHalfPi) instead of NaN.
+    const GeoPoint center{0.2f, 0.4f};
+    const float scale = 1.0f;
+    const float wayPastHorizon = kEarthRadiusKm * scale * 10.0f;
+
+    const GeoPoint recovered = unproject(Point{wayPastHorizon, 0.0f}, center, scale, ProjectionType::Orthographic);
+
+    REQUIRE(std::isfinite(recovered.latRad));
+    REQUIRE(std::isfinite(recovered.lonRad));
+    // At the horizon, straight east of center: recovered should sit
+    // exactly 90 degrees of arc from center.
+    const float centralAngle = std::acos(std::sin(center.latRad) * std::sin(recovered.latRad) + std::cos(center.latRad) * std::cos(recovered.latRad) * std::cos(recovered.lonRad - center.lonRad));
+    CHECK(centralAngle == doctest::Approx(kHalfPi).epsilon(1e-2));
+}
