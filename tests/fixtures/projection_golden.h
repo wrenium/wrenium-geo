@@ -5,7 +5,7 @@
 
 #include <cstddef>
 
-// Hand-derived golden values for the rotate()/project() pipeline
+// Hand-derived golden values for the rotate()/projectEquidistant() pipeline
 // (wrenium/geo/detail/azimuthal/rotation.h + detail/azimuthal/equidistant.h),
 // used by tests/test_projection.cpp.
 //

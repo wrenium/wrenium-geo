@@ -84,7 +84,7 @@ TEST_CASE("pipeline: center enclosed by a ring outside the clip radius synthesiz
 
     pushSingleRingLatBounds(input.points, input.ringMinLat, input.ringMaxLat);
 
-    const Error err = projectRings(workspace, input, center, clipRadiusRad, 1.0f);
+    const Error err = projectRings(workspace, input, center, clipRadiusRad, 1.0f, ProjectionType::Equidistant);
     REQUIRE(err == Error::Ok);
 
     REQUIRE(workspace.projectedRingSizes().size() == 1);
@@ -126,7 +126,7 @@ TEST_CASE("pipeline: center outside every ring and clip radius produces no outpu
 
     pushSingleRingLatBounds(input.points, input.ringMinLat, input.ringMaxLat);
 
-    const Error err = projectRings(workspace, input, center, clipRadiusRad, 1.0f);
+    const Error err = projectRings(workspace, input, center, clipRadiusRad, 1.0f, ProjectionType::Equidistant);
     REQUIRE(err == Error::Ok);
 
     CHECK(workspace.projectedRingSizes().size() == 0);
@@ -143,7 +143,7 @@ TEST_CASE("projectPoint: the center itself projects to the origin and is visible
     const GeoPoint center{0.3f, 0.5f};
     const float clipRadiusRad = 20.0f * kPi / 180.0f;
 
-    const ProjectedPoint result = projectPoint(center, center, clipRadiusRad, 1.0f);
+    const ProjectedPoint result = projectPoint(center, center, clipRadiusRad, 1.0f, ProjectionType::Equidistant);
 
     CHECK(result.visible);
     CHECK(result.point.x == doctest::Approx(0.0f).epsilon(1e-4));
@@ -157,10 +157,10 @@ TEST_CASE("projectPoint: a point within the clip radius matches a direct rotate+
     const float scale = 2.0f;
     const GeoPoint markerRaw = destinationPoint(center, 10.0f * kPi / 180.0f, 0.7f);
 
-    const ProjectedPoint result = projectPoint(markerRaw, center, clipRadiusRad, scale);
+    const ProjectedPoint result = projectPoint(markerRaw, center, clipRadiusRad, scale, ProjectionType::Equidistant);
 
     REQUIRE(result.visible);
-    const Point expected = project(rotate(markerRaw, center), scale);
+    const Point expected = projectEquidistant(rotate(markerRaw, center), scale);
     CHECK(result.point.x == doctest::Approx(expected.x).epsilon(1e-4));
     CHECK(result.point.y == doctest::Approx(expected.y).epsilon(1e-4));
 }
@@ -171,7 +171,7 @@ TEST_CASE("projectPoint: a point outside the clip radius is reported not visible
     const float clipRadiusRad = 10.0f * kPi / 180.0f;
     const GeoPoint markerRaw = destinationPoint(center, 50.0f * kPi / 180.0f, 0.0f);
 
-    const ProjectedPoint result = projectPoint(markerRaw, center, clipRadiusRad, 1.0f);
+    const ProjectedPoint result = projectPoint(markerRaw, center, clipRadiusRad, 1.0f, ProjectionType::Equidistant);
 
     CHECK_FALSE(result.visible);
     CHECK(result.point.x == 0.0f);
@@ -184,25 +184,25 @@ TEST_CASE("projectPoint: a point exactly on the clip boundary counts as visible"
     const float clipRadiusRad = 15.0f * kPi / 180.0f;
     const GeoPoint markerRaw = destinationPoint(center, clipRadiusRad, 1.2f);
 
-    const ProjectedPoint result = projectPoint(markerRaw, center, clipRadiusRad, 1.0f);
+    const ProjectedPoint result = projectPoint(markerRaw, center, clipRadiusRad, 1.0f, ProjectionType::Equidistant);
 
     CHECK(result.visible);
 }
 
-TEST_CASE("projectPoint: an explicit ProjectFn selects a different radial-distance formula than the default")
+TEST_CASE("projectPoint: ProjectionType::Orthographic selects a different radial-distance formula than ProjectionType::Equidistant")
 {
     const GeoPoint center{0.3f, 0.5f};
     const float clipRadiusRad = 20.0f * kPi / 180.0f;
     const float scale = 2.0f;
     const GeoPoint markerRaw = destinationPoint(center, 10.0f * kPi / 180.0f, 0.7f);
 
-    const ProjectedPoint equidistantResult = projectPoint(markerRaw, center, clipRadiusRad, scale);
-    const ProjectedPoint orthographicResult = projectPoint<azimuthal::projectOrthographic>(markerRaw, center, clipRadiusRad, scale);
+    const ProjectedPoint equidistantResult = projectPoint(markerRaw, center, clipRadiusRad, scale, ProjectionType::Equidistant);
+    const ProjectedPoint orthographicResult = projectPoint(markerRaw, center, clipRadiusRad, scale, ProjectionType::Orthographic);
 
     REQUIRE(equidistantResult.visible);
     REQUIRE(orthographicResult.visible);
     // Both formulas agree at the center (already covered above) but diverge
-    // away from it -- confirms the template parameter actually took effect
-    // rather than silently falling back to the default.
+    // away from it -- confirms the ProjectionType argument actually took effect
+    // rather than silently falling back to equidistant.
     CHECK(orthographicResult.point.x != doctest::Approx(equidistantResult.point.x).epsilon(1e-4));
 }

@@ -34,7 +34,7 @@ inline Point projectOrthographic(const GeoPoint &rotatedPoint, float scale)
 
     const float radius = kEarthRadiusKm * f32math::sin(centralAngle) * scale;
 
-    // Same north-up, compass convention as equidistant.h's project().
+    // Same north-up, compass convention as equidistant.h's projectEquidistant().
     float sinBearing, cosBearing;
     f32math::sincos(bearing, sinBearing, cosBearing);
 
