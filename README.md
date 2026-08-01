@@ -41,9 +41,11 @@ anywhere in the library.
 - **Two output formats**: an SVG path `d` string, or a compact tagged-float
   binary stream (magic + version header, little-endian) -- see
   `common/binary_path_decoder_example` for a reference decoder.
-- **Great-circle distance and bearing** between any two points
-  (`wrenium::geo::distanceKm`/`bearingRad`, `spherical.h`) -- general
-  spherical trig, independent of any projection or clip radius.
+- **Great-circle distance, bearing, and destination point**
+  (`wrenium::geo::distanceKm`/`bearingRad`/`destinationPoint`,
+  `spherical.h`): the distance and bearing between any two points, or the
+  point reached by travelling a given distance and bearing from one --
+  independent of any projection or clip radius.
 - **TopoJSON converter** (`topojson2bin`, in `tools/wrenium_geo_convert`) turns
   [world-atlas](https://github.com/topojson/world-atlas) TopoJSON data into
   the library's own binary input-geometry format, output as both a raw
@@ -76,11 +78,11 @@ like the azimuthal pair; it's a whole-world cylindrical projection with
 its own pipeline (`cylindrical::projectRings`/`projectLines`, see the
 "Mercator" section below).
 
-## Spherical distance and bearing
+## Spherical distance, bearing, and destination point
 
-`distanceKm`/`bearingRad` (`spherical.h`) compute the great-circle distance
-and initial compass bearing between any two `GeoPoint`s directly -- not tied
-to a projection, clip radius, or `scale`:
+`distanceKm`/`bearingRad`/`destinationPoint` (`spherical.h`) answer the two
+questions every range/bearing display needs, directly on `GeoPoint`s -- not
+tied to a projection, clip radius, or `scale`:
 
 ```cpp
 #include <wrenium/geo/spherical.h>
@@ -88,12 +90,20 @@ to a projection, clip radius, or `scale`:
 const wrenium::geo::GeoPoint here = wrenium::geo::makeGeoPoint(60.0f, 25.0f);
 const wrenium::geo::GeoPoint there = wrenium::geo::makeGeoPoint(51.5f, -0.1f);
 
+// "How far, and which way, is that other point?"
 const float km = wrenium::geo::distanceKm(here, there);
 const float bearingRad = wrenium::geo::bearingRad(here, there);
+
+// "Where do I end up going 800 km at bearing 45 degrees from here?"
+const wrenium::geo::GeoPoint arrival = wrenium::geo::destinationPoint(here, 800.0f, 45.0f * wrenium::geo::kPi / 180.0f);
 ```
 
 Bearing uses the same convention (0 = north, increasing clockwise) as every
-projection formula in this library.
+projection formula in this library. `destinationPoint` is `distanceKm`/
+`bearingRad`'s own inverse: `destinationPoint(here, distanceKm(here, there),
+bearingRad(here, there))` recovers `there`, up to this library's own
+float/trig approximation budget (single-digit kilometers per call --
+see `spherical.h`'s own doc comments for the exact error source).
 
 ## Terminology
 

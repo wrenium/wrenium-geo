@@ -92,6 +92,21 @@ public:
     // placed via this method won't line up with the map underneath it.
     Q_INVOKABLE QVariantList projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useOrthographic = false) const;
 
+    // The point reached travelling distanceKm along the great circle from
+    // (latDeg, lonDeg) at bearingDeg (0 = north, clockwise) --
+    // wrenium::geo::destinationPoint (spherical.h), not tied to any
+    // projection/clip radius/scale. Lets QML advance a moving target's own
+    // geographic position directly (e.g. one simulated tick of travel)
+    // instead of hand-rolling a flat-earth approximation of the same
+    // formula. Returns a 2-element list [latDeg, lonDeg].
+    Q_INVOKABLE QVariantList destinationPoint(double latDeg, double lonDeg, double bearingDeg, double distanceKm) const;
+
+    // Great-circle distance between two points, in km --
+    // wrenium::geo::distanceKm (spherical.h). Lets QML decide things like
+    // "has this target left coverage" against the real spherical distance
+    // from center, instead of a flat-earth approximation.
+    Q_INVOKABLE double distanceKm(double fromLatDeg, double fromLonDeg, double toLatDeg, double toLonDeg) const;
+
     // Mercator counterpart to computeCoastlineSvgPath -- a fully separate
     // pipeline (cylindrical::projectRings, cylindrical_pipeline.h),
     // not a useOrthographic-style flag on the azimuthal methods above: no

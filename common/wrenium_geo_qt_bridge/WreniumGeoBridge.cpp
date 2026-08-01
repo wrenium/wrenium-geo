@@ -9,6 +9,7 @@
 #include <wrenium/geo/detail/azimuthal/orthographic.h>
 #include <wrenium/geo/detail/cylindrical/mercator.h>
 #include <wrenium/geo/projection.h>
+#include <wrenium/geo/spherical.h>
 #include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/viewport.h>
 
@@ -161,6 +162,22 @@ QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double cente
         return {0.0, 0.0, false};
     }
     return {static_cast<double>(projected.point.x), static_cast<double>(projected.point.y), true};
+}
+
+QVariantList WreniumGeoBridge::destinationPoint(double latDeg, double lonDeg, double bearingDeg, double distanceKm) const
+{
+    const wrenium::geo::GeoPoint origin = wrenium::geo::makeGeoPoint(static_cast<float>(latDeg), static_cast<float>(lonDeg));
+    const float bearingRad = static_cast<float>(bearingDeg) * static_cast<float>(1.0 / kRadToDeg);
+
+    const wrenium::geo::GeoPoint result = wrenium::geo::destinationPoint(origin, static_cast<float>(distanceKm), bearingRad);
+    return {static_cast<double>(result.latRad) * kRadToDeg, static_cast<double>(result.lonRad) * kRadToDeg};
+}
+
+double WreniumGeoBridge::distanceKm(double fromLatDeg, double fromLonDeg, double toLatDeg, double toLonDeg) const
+{
+    const wrenium::geo::GeoPoint from = wrenium::geo::makeGeoPoint(static_cast<float>(fromLatDeg), static_cast<float>(fromLonDeg));
+    const wrenium::geo::GeoPoint to = wrenium::geo::makeGeoPoint(static_cast<float>(toLatDeg), static_cast<float>(toLonDeg));
+    return static_cast<double>(wrenium::geo::distanceKm(from, to));
 }
 
 QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter)
