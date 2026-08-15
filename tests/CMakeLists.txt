@@ -14,6 +14,7 @@ add_executable(tests
     test_pipeline.cpp
     test_input_format.cpp
     test_binary_emitter.cpp
+    test_binary_format.cpp
     test_svg_emitter.cpp
     test_float_format.cpp
     test_pipeline_benchmark.cpp

@@ -65,7 +65,7 @@ void writeBinaryFile(const std::string &path, const std::vector<std::uint8_t> &b
     }
 }
 
-void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes, std::size_t pointCount, std::size_t ringCount)
+void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes, std::size_t pointCount, std::size_t ringCount, std::size_t maxRingPointCount)
 {
     std::ofstream file(path, std::ios::trunc);
     if (!file) {
@@ -114,17 +114,19 @@ void writeHeaderFile(const std::string &path, const std::string &arrayName, cons
     // would print as hex digit strings instead of the actual numbers.
     file << std::dec;
     file << "// data/size for loadInputGeometry() (input_format.h); pointCount/\n";
-    file << "// ringCount for its InputGeometry<MaxPoints, MaxRings> capacity.\n";
-    file << "// Anonymous: this header may be #include'd alongside another one\n";
-    file << "// generated the same way, and two identical named struct types would\n";
-    file << "// conflict.\n";
+    file << "// ringCount for its InputGeometry<MaxPoints, MaxRings> capacity;\n";
+    file << "// maxRingPointCount (this dataset's single largest ring/run) for a\n";
+    file << "// Workspace's own MaxRingPoints. Anonymous: this header may be\n";
+    file << "// #include'd alongside another one generated the same way, and two\n";
+    file << "// identical named struct types would conflict.\n";
     file << "static constexpr struct\n";
     file << "{\n";
     file << "    const std::uint8_t *data;\n";
     file << "    std::size_t size;\n";
     file << "    std::size_t pointCount;\n";
     file << "    std::size_t ringCount;\n";
-    file << "} " << arrayName << "Info{" << arrayName << ", sizeof(" << arrayName << "), " << pointCount << ", " << ringCount << "};\n";
+    file << "    std::size_t maxRingPointCount;\n";
+    file << "} " << arrayName << "Info{" << arrayName << ", sizeof(" << arrayName << "), " << pointCount << ", " << ringCount << ", " << maxRingPointCount << "};\n";
 
     if (!file) {
         throw std::runtime_error("topojson2bin: failed to write header file: " + path);
