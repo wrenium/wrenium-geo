@@ -40,7 +40,7 @@ namespace detail {
 /// wrap -- see that file's own comment for why). Latitude is silently
 /// clamped to +-kMercatorMaxLatRad first (see #kMercatorMaxLatRad) --
 /// Mercator's own y has no finite value at the true poles.
-inline float projectY(float latRad, float scale) // NOLINT(bugprone-easily-swappable-parameters)
+constexpr float projectY(float latRad, float scale) // NOLINT(bugprone-easily-swappable-parameters)
 {
     float clampedLat = latRad;
     if (clampedLat > kMercatorMaxLatRad) {
@@ -63,7 +63,7 @@ inline float projectY(float latRad, float scale) // NOLINT(bugprone-easily-swapp
 /// @param scale Output units per kilometer.
 /// @return The planar (x, y) projection. See #detail::projectY for the
 /// pole-latitude clamping this applies (to both @p point and @p center).
-inline Point project(const GeoPoint &point, const GeoPoint &center, float scale)
+constexpr Point project(const GeoPoint &point, const GeoPoint &center, float scale)
 {
     const float lonDelta = wrenium::geo::detail::wrapPi(point.lonRad - center.lonRad);
 

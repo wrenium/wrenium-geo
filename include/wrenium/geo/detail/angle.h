@@ -17,7 +17,7 @@ namespace wrenium::geo::detail {
 /// (detail/azimuthal/clip.h) and cylindrical's antimeridian handling
 /// (detail/cylindrical/) both need the same operation, so it lives here
 /// rather than under either family's own `detail`.
-inline float wrapPi(float value)
+constexpr float wrapPi(float value)
 {
     while (value > kPi) {
         value -= 2.0f * kPi;
