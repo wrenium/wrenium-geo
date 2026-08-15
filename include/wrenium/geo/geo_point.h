@@ -22,7 +22,7 @@ struct GeoPoint
 /// @param latDeg Latitude in degrees, north-positive.
 /// @param lonDeg Longitude in degrees, east-positive.
 /// @return The equivalent GeoPoint, in radians.
-inline GeoPoint makeGeoPoint(float latDeg, float lonDeg)
+constexpr GeoPoint makeGeoPoint(float latDeg, float lonDeg)
 {
     constexpr float kDegToRad = kPi / 180.0f;
     return GeoPoint{latDeg * kDegToRad, lonDeg * kDegToRad};
