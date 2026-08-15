@@ -65,7 +65,7 @@ void writeBinaryFile(const std::string &path, const std::vector<std::uint8_t> &b
     }
 }
 
-void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes)
+void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes, std::size_t pointCount, std::size_t ringCount)
 {
     std::ofstream file(path, std::ios::trunc);
     if (!file) {
@@ -84,7 +84,7 @@ void writeHeaderFile(const std::string &path, const std::string &arrayName, cons
     file << "// include/wrenium/geo/input_format.h.\n\n";
     file << "#include <cstddef>\n";
     file << "#include <cstdint>\n\n";
-    file << "static const std::uint8_t " << arrayName << "[] = {\n";
+    file << "static constexpr std::uint8_t " << arrayName << "[] = {\n";
 
     constexpr std::size_t kBytesPerLine = 12;
     for (std::size_t i = 0; i < bytes.size(); ++i) {
@@ -108,7 +108,23 @@ void writeHeaderFile(const std::string &path, const std::string &arrayName, cons
     }
 
     file << "};\n\n";
-    file << "static const std::size_t " << arrayName << "Size = sizeof(" << arrayName << ");\n";
+
+    // The byte-array loop above left the stream in std::hex mode (a sticky
+    // format flag, not a one-shot) -- reset to decimal or these counts
+    // would print as hex digit strings instead of the actual numbers.
+    file << std::dec;
+    file << "// data/size for loadInputGeometry() (input_format.h); pointCount/\n";
+    file << "// ringCount for its InputGeometry<MaxPoints, MaxRings> capacity.\n";
+    file << "// Anonymous: this header may be #include'd alongside another one\n";
+    file << "// generated the same way, and two identical named struct types would\n";
+    file << "// conflict.\n";
+    file << "static constexpr struct\n";
+    file << "{\n";
+    file << "    const std::uint8_t *data;\n";
+    file << "    std::size_t size;\n";
+    file << "    std::size_t pointCount;\n";
+    file << "    std::size_t ringCount;\n";
+    file << "} " << arrayName << "Info{" << arrayName << ", sizeof(" << arrayName << "), " << pointCount << ", " << ringCount << "};\n";
 
     if (!file) {
         throw std::runtime_error("topojson2bin: failed to write header file: " + path);

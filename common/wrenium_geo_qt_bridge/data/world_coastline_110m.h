@@ -11,7 +11,7 @@
 #include <cstddef>
 #include <cstdint>
 
-static const std::uint8_t kWreniumGeoWorldCoastline110m[] = {
+static constexpr std::uint8_t kWreniumGeoWorldCoastline110m[] = {
     0x31, 0x4d, 0x47, 0x57, 0x01, 0x00, 0x00, 0x00, 0x7e, 0x00, 0x00, 0x00,
     0x0c, 0x00, 0x00, 0x00, 0xef, 0xcf, 0xb2, 0xbf, 0x90, 0x15, 0x85, 0xbf,
     0x4c, 0xf3, 0xb3, 0xbf, 0x64, 0xbe, 0x85, 0xbf, 0xc9, 0xf4, 0xb4, 0xbf,
@@ -3388,4 +3388,15 @@ static const std::uint8_t kWreniumGeoWorldCoastline110m[] = {
     0x45, 0xa6, 0xba, 0x3f, 0xb4, 0x91, 0x2c, 0xbf, 0x72, 0xdd, 0xba, 0x3f,
     0x09, 0xc6, 0x1c, 0xbf};
 
-static const std::size_t kWreniumGeoWorldCoastline110mSize = sizeof(kWreniumGeoWorldCoastline110m);
+// data/size for loadInputGeometry() (input_format.h); pointCount/
+// ringCount for its InputGeometry<MaxPoints, MaxRings> capacity.
+// Anonymous: this header may be #include'd alongside another one
+// generated the same way, and two identical named struct types would
+// conflict.
+static constexpr struct
+{
+    const std::uint8_t *data;
+    std::size_t size;
+    std::size_t pointCount;
+    std::size_t ringCount;
+} kWreniumGeoWorldCoastline110mInfo{kWreniumGeoWorldCoastline110m, sizeof(kWreniumGeoWorldCoastline110m), 4997, 126};
