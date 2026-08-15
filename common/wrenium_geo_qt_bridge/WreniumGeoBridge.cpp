@@ -17,8 +17,6 @@
 #include <wrenium/geo/viewport.h>
 
 #include "BinaryPathDecoder.h"
-#include "world_borders_110m.h"
-#include "world_coastline_110m.h"
 
 namespace {
 
@@ -47,7 +45,7 @@ bool WreniumGeoBridge::loadInputOnce()
     }
 
     const wrenium::geo::Error err = wrenium::geo::loadInputGeometry(
-        kWreniumGeoWorldCoastline110m, sizeof(kWreniumGeoWorldCoastline110m), m_input);
+        kWreniumGeoWorldCoastline110mInfo.data, kWreniumGeoWorldCoastline110mInfo.size, m_input);
     warnOnError("loadInputOnce: loadInputGeometry", err);
     m_inputLoaded = (err == wrenium::geo::Error::Ok);
     return m_inputLoaded;
@@ -60,7 +58,7 @@ bool WreniumGeoBridge::loadBorderInputOnce()
     }
 
     const wrenium::geo::Error err = wrenium::geo::loadInputGeometry(
-        kWreniumGeoWorldBorders110m, sizeof(kWreniumGeoWorldBorders110m), m_borderInput);
+        kWreniumGeoWorldBorders110mInfo.data, kWreniumGeoWorldBorders110mInfo.size, m_borderInput);
     warnOnError("loadBorderInputOnce: loadInputGeometry", err);
     m_borderInputLoaded = (err == wrenium::geo::Error::Ok);
     return m_borderInputLoaded;

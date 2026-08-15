@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
         const std::vector<std::uint8_t> bytes = wrenium_geo_convert::encodeGeometry(rings);
 
         wrenium_geo_convert::writeBinaryFile(outputBinPath, bytes);
-        wrenium_geo_convert::writeHeaderFile(outputHeaderPath, arrayName, bytes);
+        wrenium_geo_convert::writeHeaderFile(outputHeaderPath, arrayName, bytes, totalPoints, rings.size());
 
         std::cout << "topojson2bin: decoded " << rings.size() << (meshMode ? " border segments, " : " rings, ")
                   << totalPoints << " points total (" << bytes.size() << " bytes)\n"
