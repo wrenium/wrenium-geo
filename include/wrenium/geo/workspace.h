@@ -98,6 +98,13 @@ namespace wrenium::geo {
 /// actual largest ring (see its own template-parameter description
 /// below).
 ///
+/// If a single Workspace is shared across a closed-ring dataset and an
+/// open-polyline dataset (both drawn through the same buffers, one at a
+/// time), workspace_sizing.h's sharedWorkspaceSizeFor() computes
+/// MaxPoints/MaxRings/OutputCharCapacity for that pair in one call,
+/// instead of doing steps 2 and 3 above by hand for each dataset and
+/// taking the max yourself.
+///
 /// ### 4. However you size it, check for Error::CapacityExceeded
 ///
 /// A too-small capacity fails safely -- Error::CapacityExceeded, never
