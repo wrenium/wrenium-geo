@@ -69,8 +69,12 @@ int main(int argc, char *argv[])
             : wrenium_geo_convert::decodeTopology(topology, objectName);
 
         std::size_t totalPoints = 0;
+        std::size_t maxRingPoints = 0;
         for (const wrenium_geo_convert::Ring &ring : rings) {
             totalPoints += ring.size();
+            if (ring.size() > maxRingPoints) {
+                maxRingPoints = ring.size();
+            }
         }
 
         // Decode once, encode once, write both output forms from the same
@@ -78,10 +82,12 @@ int main(int argc, char *argv[])
         const std::vector<std::uint8_t> bytes = wrenium_geo_convert::encodeGeometry(rings);
 
         wrenium_geo_convert::writeBinaryFile(outputBinPath, bytes);
-        wrenium_geo_convert::writeHeaderFile(outputHeaderPath, arrayName, bytes, totalPoints, rings.size());
+        wrenium_geo_convert::writeHeaderFile(outputHeaderPath, arrayName, bytes, totalPoints, rings.size(), maxRingPoints);
 
         std::cout << "topojson2bin: decoded " << rings.size() << (meshMode ? " border segments, " : " rings, ")
-                  << totalPoints << " points total (" << bytes.size() << " bytes)\n"
+                  << totalPoints << " points total, largest single "
+                  << (meshMode ? "segment " : "ring ") << maxRingPoints << " points ("
+                  << bytes.size() << " bytes)\n"
                   << "  wrote " << outputBinPath << "\n"
                   << "  wrote " << outputHeaderPath << "\n";
     } catch (const std::exception &e) {

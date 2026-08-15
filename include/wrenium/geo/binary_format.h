@@ -3,6 +3,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <cstdint>
 
 /// @file
@@ -50,5 +51,32 @@ struct PathCommand
     static constexpr float LineTo = 1.0f;    ///< Draws a straight segment to the point that follows.
     static constexpr float ClosePath = 2.0f; ///< Closes the current subpath back to its MoveTo; no point follows.
 };
+
+/// The exact byte capacity BinaryPathEmitter::encode() (binary_emitter.h)
+/// needs for up to @p maxPoints points across up to @p maxRings closed
+/// rings. Unlike SVG text (svgOutputCharCapacityForRings(), float_format.h),
+/// this has no coordinate-magnitude dependency at all -- every element is
+/// a fixed 4-byte float regardless of value -- so it's an exact byte
+/// count, not just a tight bound.
+/// @param maxPoints See Workspace's own MaxPoints.
+/// @param maxRings See Workspace's own MaxRings.
+constexpr std::size_t binaryOutputByteCapacityForRings(std::size_t maxPoints, std::size_t maxRings)
+{
+    // 3 floats/point (tag + x + y) + 1 float/ring (the ClosePath tag) --
+    // see BinaryPathEmitter::encode's own walk.
+    return sizeof(PathBinaryHeader) + (maxPoints * 3 + maxRings) * sizeof(float);
+}
+
+/// Same as #binaryOutputByteCapacityForRings, for
+/// LineBinaryPathEmitter::encode()'s (binary_emitter.h) open-polyline
+/// output -- no run-count parameter, unlike its SVG counterpart
+/// (svgOutputCharCapacityForLines()): an open run has no per-run overhead
+/// at all in the binary format (no ClosePath tag ever written), so the
+/// byte count depends only on the point count.
+/// @param maxPoints See Workspace's own MaxPoints.
+constexpr std::size_t binaryOutputByteCapacityForLines(std::size_t maxPoints)
+{
+    return sizeof(PathBinaryHeader) + (maxPoints * 3) * sizeof(float);
+}
 
 } // namespace wrenium::geo

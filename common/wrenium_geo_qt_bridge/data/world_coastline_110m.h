@@ -3389,14 +3389,16 @@ static constexpr std::uint8_t kWreniumGeoWorldCoastline110m[] = {
     0x09, 0xc6, 0x1c, 0xbf};
 
 // data/size for loadInputGeometry() (input_format.h); pointCount/
-// ringCount for its InputGeometry<MaxPoints, MaxRings> capacity.
-// Anonymous: this header may be #include'd alongside another one
-// generated the same way, and two identical named struct types would
-// conflict.
+// ringCount for its InputGeometry<MaxPoints, MaxRings> capacity;
+// maxRingPointCount (this dataset's single largest ring/run) for a
+// Workspace's own MaxRingPoints. Anonymous: this header may be
+// #include'd alongside another one generated the same way, and two
+// identical named struct types would conflict.
 static constexpr struct
 {
     const std::uint8_t *data;
     std::size_t size;
     std::size_t pointCount;
     std::size_t ringCount;
-} kWreniumGeoWorldCoastline110mInfo{kWreniumGeoWorldCoastline110m, sizeof(kWreniumGeoWorldCoastline110m), 4997, 126};
+    std::size_t maxRingPointCount;
+} kWreniumGeoWorldCoastline110mInfo{kWreniumGeoWorldCoastline110m, sizeof(kWreniumGeoWorldCoastline110m), 4997, 126, 1319};

@@ -29,14 +29,16 @@ std::vector<std::uint8_t> encodeGeometry(const std::vector<Ring> &rings);
 void writeBinaryFile(const std::string &path, const std::vector<std::uint8_t> &bytes);
 
 // Writes a generated C++ header at `path` containing
-// `static const std::uint8_t <arrayName>[]` with the identical bytes (plus
-// a `<arrayName>Size` size constant), so a build can #include the data
-// directly with zero runtime file I/O. Also emits `<arrayName>PointCount`/
-// `<arrayName>RingCount` -- a consumer's InputGeometry<MaxPoints, MaxRings>
-// (input_format.h) needs to fit this exact dataset, and those counts are
-// only ever known here, at generation time, from the decoded rings
-// themselves -- not re-derivable from the encoded byte buffer alone
-// without re-parsing it. Throws std::runtime_error on failure to open/write.
-void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes, std::size_t pointCount, std::size_t ringCount);
+// `static constexpr std::uint8_t <arrayName>[]` with the identical bytes,
+// so a build can #include the data directly with zero runtime file I/O.
+// Also emits `<arrayName>Info`, an anonymous data/size/pointCount/
+// ringCount/maxRingPointCount struct -- a consumer's
+// InputGeometry<MaxPoints, MaxRings> (input_format.h) needs to fit this
+// exact dataset, and a Workspace's own MaxRingPoints needs to fit this
+// dataset's single largest ring/run; both are only ever known here, at
+// generation time, from the decoded rings themselves -- not re-derivable
+// from the encoded byte buffer alone without re-parsing it. Throws
+// std::runtime_error on failure to open/write.
+void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes, std::size_t pointCount, std::size_t ringCount, std::size_t maxRingPointCount);
 
 } // namespace wrenium_geo_convert

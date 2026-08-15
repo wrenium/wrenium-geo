@@ -11,6 +11,7 @@
 #include <QVariantList>
 #include <qqmlintegration.h>
 
+#include <wrenium/geo/binary_format.h>
 #include <wrenium/geo/buffer.h>
 #include <wrenium/geo/float_format.h>
 #include <wrenium/geo/geo_point.h>
@@ -184,7 +185,18 @@ private:
     // desktop, where the RAM this margin costs is negligible.
     static constexpr std::size_t kMaxPoints = kWreniumGeoWorldCoastline110mInfo.pointCount + 1000;
     static constexpr std::size_t kMaxRings = kWreniumGeoWorldCoastline110mInfo.ringCount + 50;
-    static constexpr std::size_t kMaxBinaryBytes = 131072;
+
+    // Only ever needs to hold one ring's worth of points at a time (see
+    // ringRotatedCache's own comment, workspace.h) -- kWreniumGeoWorldCoastline110mInfo.maxRingPointCount
+    // (this dataset's single largest ring, generated the same way as
+    // pointCount/ringCount) is the real bound, far below kMaxPoints.
+    static constexpr std::size_t kMaxRingPoints = kWreniumGeoWorldCoastline110mInfo.maxRingPointCount + 200;
+
+    // Exact (binary_format.h): every element is a fixed-size float
+    // regardless of coordinate magnitude, so this needs no margin beyond
+    // kMaxPoints/kMaxRings' own -- unlike the old flat 131072 guess, it
+    // was never actually verified against what BinaryPathEmitter needs.
+    static constexpr std::size_t kMaxBinaryBytes = wrenium::geo::binaryOutputByteCapacityForRings(kMaxPoints, kMaxRings);
 
     // Border data's own margin can be smaller: clipLineToSink never needs
     // arc-bridging (an open polyline just ends its run at the clip-circle
@@ -193,7 +205,8 @@ private:
     // not a whole arc's worth -- see world_borders_110m.h's own comment.
     static constexpr std::size_t kMaxBorderPoints = kWreniumGeoWorldBorders110mInfo.pointCount + 200;
     static constexpr std::size_t kMaxBorderRings = kWreniumGeoWorldBorders110mInfo.ringCount + 50;
-    static constexpr std::size_t kMaxBorderBinaryBytes = 131072;
+    static constexpr std::size_t kMaxBorderRingPoints = kWreniumGeoWorldBorders110mInfo.maxRingPointCount + 100;
+    static constexpr std::size_t kMaxBorderBinaryBytes = wrenium::geo::binaryOutputByteCapacityForLines(kMaxBorderPoints);
 
     // Bounds the largest |coordinate| projectRings()/
     // cylindrical::projectRings() can ever hand emitSvgPath(): exactly
@@ -216,7 +229,7 @@ private:
     bool loadInputOnce();
     bool loadBorderInputOnce();
 
-    wrenium::geo::Workspace<kMaxPoints, kMaxRings, kMaxPoints, kOutputCharCapacity> m_workspace;
+    wrenium::geo::Workspace<kMaxPoints, kMaxRings, kMaxRingPoints, kOutputCharCapacity> m_workspace;
     // Points plus each ring's own [minLat, maxLat], loaded once by
     // loadInputGeometry (input_format.h) instead of rescanned by
     // azimuthal::projectRings on every recompute -- see that function's
@@ -225,7 +238,7 @@ private:
     wrenium::geo::Buffer<std::uint8_t, kMaxBinaryBytes> m_binaryPath;
     bool m_inputLoaded = false;
 
-    wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings, kMaxBorderPoints, kBorderOutputCharCapacity> m_borderWorkspace;
+    wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings, kMaxBorderRingPoints, kBorderOutputCharCapacity> m_borderWorkspace;
     wrenium::geo::InputGeometry<kMaxBorderPoints, kMaxBorderRings> m_borderInput;
     wrenium::geo::Buffer<std::uint8_t, kMaxBorderBinaryBytes> m_borderBinaryPath;
     bool m_borderInputLoaded = false;
