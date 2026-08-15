@@ -1,4 +1,4 @@
-# wrenium-geo
+#wrenium - geo
 
 [![CI](https://github.com/wrenium/wrenium-geo/actions/workflows/ci.yml/badge.svg)](https://github.com/wrenium/wrenium-geo/actions/workflows/ci.yml)
 [![REUSE status](https://api.reuse.software/badge/github.com/wrenium/wrenium-geo)](https://api.reuse.software/info/github.com/wrenium/wrenium-geo)
@@ -154,11 +154,14 @@ full showcase applications for people *evaluating* it.
 ## TopoJSON converter
 
 `topojson2bin` converts a TopoJSON file into wrenium-geo's binary
-input-geometry format. Each run writes the same data out twice: a raw
-`.bin` file, and a generated C++ header to `#include` directly -- the
-header also declares `<array-name>Info`, a `data`/`size`/`pointCount`/
-`ringCount` struct computed from the decoded rings at generation time
-(see workspace.h's own "Sizing a Workspace" comment for how to use it).
+input-geometry format. Each run writes the same data out three ways: a
+raw `.bin` file, a generated C++ **data** header (the byte array, plus a
+`<array-name>Size` constant) to `#include` directly, and a separate,
+tiny generated C++ **info** header declaring `<array-name>Info` -- a
+`pointCount`/`ringCount`/`maxRingPointCount` struct computed from the
+decoded rings at generation time (see workspace.h's own "Sizing a
+Workspace" comment for how to use it). The info header stands on its
+own, so a consumer that only needs sizing info can use just that one file.
 
 `topojson2bin` expects **quantized TopoJSON** -- the default output of
 tools like `topojson-server`/`mapshaper` (and what
@@ -180,13 +183,14 @@ line. That named object must be a `Polygon`, `MultiPolygon`, or a
   world-atlas's `countries-110m.json`, object `countries`).
 
 These two commands are exactly how the checked-in default data
-(`common/wrenium_geo_qt_bridge/data/world_coastline_110m.h`,
-`world_borders_110m.h`) was produced -- coastline without `--mesh`,
+(`common/wrenium_geo_qt_bridge/data/world_coastline_110m.h` +
+`world_coastline_110m_info.h`, `world_borders_110m.h` +
+`world_borders_110m_info.h`) was produced -- coastline without `--mesh`,
 borders with it:
 
 ```sh
-topojson2bin land-110m.json land coastline.bin coastline.h
-topojson2bin --mesh countries-110m.json countries borders.bin borders.h
+topojson2bin land-110m.json land coastline.bin coastline.h coastline-info.h
+topojson2bin --mesh countries-110m.json countries borders.bin borders.h borders-info.h
 ```
 
 ## Coordinate conventions
@@ -230,9 +234,12 @@ three calls a caller re-runs on every pan/zoom, just with a different
 #include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/workspace.h>
 
-#include "coastline.h" // topojson2bin's generated header -- see "TopoJSON
-                        // converter" above; declares kWreniumGeoCoastlineData
-                        // and kWreniumGeoCoastlineDataInfo
+// topojson2bin's two generated headers -- see "TopoJSON converter" above.
+// coastline-info.h holds pointCount/ringCount/maxRingPointCount; use it
+// alone wherever only the sizing numbers are needed. coastline.h holds
+// the actual bytes (kWreniumGeoCoastlineData/kWreniumGeoCoastlineDataSize).
+#include "coastline-info.h"
+#include "coastline.h"
 
 // InputGeometry's capacity is exact -- kWreniumGeoCoastlineDataInfo already
 // computed it. Workspace gets a documented margin on top of that; see
@@ -246,7 +253,7 @@ wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> coastlineInput;   // the load
 
 // Parse the coastline data once -- it doesn't change between recomputes
 // below, only center/radius do.
-wrenium::geo::loadInputGeometry(kWreniumGeoCoastlineDataInfo.data, kWreniumGeoCoastlineDataInfo.size, coastlineInput);
+wrenium::geo::loadInputGeometry(kWreniumGeoCoastlineData, kWreniumGeoCoastlineDataSize, coastlineInput);
 
 // Where to center the map (Helsinki), and how much of the world around it
 // to include and how large to draw it.

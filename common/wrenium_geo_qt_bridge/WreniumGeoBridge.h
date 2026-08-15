@@ -18,8 +18,14 @@
 #include <wrenium/geo/input_format.h>
 #include <wrenium/geo/workspace.h>
 
-#include "world_borders_110m.h"
-#include "world_coastline_110m.h"
+// Only the small *Info headers, not the data headers with the embedded
+// byte arrays -- this header's own capacity math (kMaxPoints etc. below)
+// only needs pointCount/ringCount/maxRingPointCount, and keeping the
+// large arrays out of it entirely is the whole reason they're generated
+// as separate files. WreniumGeoBridge.cpp includes the data headers
+// directly, where the actual bytes are needed.
+#include "world_borders_110m_info.h"
+#include "world_coastline_110m_info.h"
 
 // C++/QML bridge wrapping the wrenium-geo core library, shared by all three
 // Qt Quick apps (demos/rotator, demos/radar, examples/azimuthmap) via the
