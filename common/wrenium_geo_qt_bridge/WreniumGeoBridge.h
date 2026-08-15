@@ -12,6 +12,7 @@
 #include <qqmlintegration.h>
 
 #include <wrenium/geo/buffer.h>
+#include <wrenium/geo/float_format.h>
 #include <wrenium/geo/geo_point.h>
 #include <wrenium/geo/input_format.h>
 #include <wrenium/geo/workspace.h>
@@ -194,10 +195,28 @@ private:
     static constexpr std::size_t kMaxBorderRings = kWreniumGeoWorldBorders110mInfo.ringCount + 50;
     static constexpr std::size_t kMaxBorderBinaryBytes = 131072;
 
+    // Bounds the largest |coordinate| projectRings()/
+    // cylindrical::projectRings() can ever hand emitSvgPath(): exactly
+    // viewportRadiusPx for azimuthal output via makeViewport()
+    // (viewport.h; clipRadiusKm cancels out of that helper's own scale
+    // formula), approximately viewportWidthPx/2 for Mercator's own scale
+    // formula. Both, in turn, come from min(width, height)/2 of a map
+    // pane (Main.qml/AzimuthMap.qml/MercatorMap.qml) -- the *shorter*
+    // window dimension caps it, so even the largest common consumer
+    // display today, 8K (7680x4320), maximized, tops out around 4320/2 =
+    // 2160px. This leaves real headroom above that, not the display width.
+    static constexpr float kMaxViewportPx = 2500.0f;
+
+    // Computed (float_format.h) from the actual shape of what gets drawn,
+    // not Workspace's own blind default (a flat 24 bytes/point) -- see
+    // svgOutputCharCapacityForRings()'s own comment.
+    static constexpr std::size_t kOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForRings(kMaxPoints, kMaxRings, kMaxViewportPx);
+    static constexpr std::size_t kBorderOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForLines(kMaxBorderPoints, kMaxBorderRings, kMaxViewportPx);
+
     bool loadInputOnce();
     bool loadBorderInputOnce();
 
-    wrenium::geo::Workspace<kMaxPoints, kMaxRings> m_workspace;
+    wrenium::geo::Workspace<kMaxPoints, kMaxRings, kMaxPoints, kOutputCharCapacity> m_workspace;
     // Points plus each ring's own [minLat, maxLat], loaded once by
     // loadInputGeometry (input_format.h) instead of rescanned by
     // azimuthal::projectRings on every recompute -- see that function's
@@ -206,7 +225,7 @@ private:
     wrenium::geo::Buffer<std::uint8_t, kMaxBinaryBytes> m_binaryPath;
     bool m_inputLoaded = false;
 
-    wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings> m_borderWorkspace;
+    wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings, kMaxBorderPoints, kBorderOutputCharCapacity> m_borderWorkspace;
     wrenium::geo::InputGeometry<kMaxBorderPoints, kMaxBorderRings> m_borderInput;
     wrenium::geo::Buffer<std::uint8_t, kMaxBorderBinaryBytes> m_borderBinaryPath;
     bool m_borderInputLoaded = false;
