@@ -41,6 +41,16 @@ anywhere in the library.
 - **Two output formats**: an SVG path `d` string, or a compact tagged-float
   binary stream (magic + version header, little-endian) -- see
   `common/binary_path_decoder_example` for a reference decoder.
+- **Compile-time SVG generation** (`wrenium::geo::azimuthal::projectRingsToSvgConstexpr`/
+  `wrenium::geo::cylindrical::projectRingsToSvgConstexpr`,
+  `azimuthal_constexpr_svg.h`/`cylindrical_constexpr_svg.h`): for a fixed
+  center/clip radius/scale and point list known entirely at compile time,
+  produces the finished SVG path text as a `constexpr` value -- zero
+  runtime bytes, zero runtime cycles, just static data in the compiled
+  binary. Narrower than the full runtime pipeline (no boundary-accurate
+  clipping or antimeridian handling), so not a replacement for
+  `projectRingsToSvg` for anything that varies at runtime -- panning,
+  zooming, a live GPS center.
 - **Great-circle distance, bearing, and destination point**
   (`wrenium::geo::distanceKm`/`bearingRad`/`destinationPoint`,
   `spherical.h`): the distance and bearing between any two points, or the

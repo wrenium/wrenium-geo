@@ -58,7 +58,7 @@ constexpr FractionDigitTable kFractionDigitTable = makeFractionDigitTable();
 /// @return Error::Ok on success, or Error::CapacityExceeded if @p out ran
 /// out of room partway through.
 template <std::size_t Capacity>
-inline Error appendFixedFloat(Buffer<char, Capacity> &out, float value)
+constexpr Error appendFixedFloat(Buffer<char, Capacity> &out, float value)
 {
     constexpr std::uint32_t kScale = 1000; // 10 ^ kFloatFormatDecimalPlaces
 
@@ -89,7 +89,7 @@ inline Error appendFixedFloat(Buffer<char, Capacity> &out, float value)
 
     // Integer-part digits, most-significant first. 10 digits is enough for
     // any std::uint32_t value.
-    char digits[10];
+    char digits[10] = {};
     int digitCount = 0;
     std::uint32_t remaining = integerPart;
     do {

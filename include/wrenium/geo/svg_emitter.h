@@ -36,7 +36,7 @@ namespace wrenium::geo {
 /// @return Error::Ok on success, or Error::CapacityExceeded if @p out is
 /// too small.
 template <std::size_t OutCapacity>
-inline Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std::size_t ringCount, Buffer<char, OutCapacity> &out)
+constexpr Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std::size_t ringCount, Buffer<char, OutCapacity> &out)
 {
     out.clear();
 
@@ -120,7 +120,7 @@ inline Error emitSvgPath(const Point *points, const std::size_t *ringSizes, std:
 /// @return Error::Ok on success, or Error::CapacityExceeded if @p out is
 /// too small.
 template <std::size_t OutCapacity>
-inline Error emitSvgLinePath(const Point *points, const std::size_t *runSizes, std::size_t runCount, Buffer<char, OutCapacity> &out)
+constexpr Error emitSvgLinePath(const Point *points, const std::size_t *runSizes, std::size_t runCount, Buffer<char, OutCapacity> &out)
 {
     out.clear();
 

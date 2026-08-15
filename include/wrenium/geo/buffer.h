@@ -39,7 +39,7 @@ public:
     /// Appends @p value if there's room.
     /// @return Error::Ok on success, Error::CapacityExceeded if the buffer
     /// is already at capacity() (the buffer is left unchanged).
-    Error pushBack(const T &value)
+    constexpr Error pushBack(const T &value)
     {
         if (m_size >= Capacity) {
             return Error::CapacityExceeded;
@@ -59,13 +59,13 @@ public:
     /// clear()/truncate() (unlike size() itself) -- only available when
     /// WRENIUM_GEO_TRACK_HIGH_WATER_MARK is defined; see this class's own
     /// comment.
-    std::size_t highWaterMark() const
+    constexpr std::size_t highWaterMark() const
     {
         return m_highWaterMark;
     }
 #endif
 
-    std::size_t size() const
+    constexpr std::size_t size() const
     {
         return m_size;
     }
@@ -75,27 +75,27 @@ public:
         return Capacity;
     }
 
-    T *data()
+    constexpr T *data()
     {
         return m_data.data();
     }
 
-    const T *data() const
+    constexpr const T *data() const
     {
         return m_data.data();
     }
 
-    T &operator[](std::size_t index)
+    constexpr T &operator[](std::size_t index)
     {
         return m_data[index];
     }
 
-    const T &operator[](std::size_t index) const
+    constexpr const T &operator[](std::size_t index) const
     {
         return m_data[index];
     }
 
-    void clear()
+    constexpr void clear()
     {
         m_size = 0;
     }
@@ -103,29 +103,29 @@ public:
     /// Shrinks the logical size to @p newSize; a no-op if @p newSize isn't
     /// smaller than the current size. Used by the clip stage to discard a
     /// ring that turned out degenerate, without a second buffer to copy out of.
-    void truncate(std::size_t newSize)
+    constexpr void truncate(std::size_t newSize)
     {
         if (newSize < m_size) {
             m_size = newSize;
         }
     }
 
-    T *begin()
+    constexpr T *begin()
     {
         return m_data.data();
     }
 
-    T *end()
+    constexpr T *end()
     {
         return m_data.data() + m_size;
     }
 
-    const T *begin() const
+    constexpr const T *begin() const
     {
         return m_data.data();
     }
 
-    const T *end() const
+    constexpr const T *end() const
     {
         return m_data.data() + m_size;
     }

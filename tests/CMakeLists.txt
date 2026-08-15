@@ -20,6 +20,8 @@ add_executable(tests
     test_svg_emitter.cpp
     test_float_format.cpp
     test_workspace_sizing.cpp
+    test_azimuthal_constexpr_svg.cpp
+    test_cylindrical_constexpr_svg.cpp
     test_pipeline_benchmark.cpp
 )
 
