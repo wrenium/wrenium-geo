@@ -9,35 +9,48 @@
 /// @file
 /// Workspace's internal typed storage for its point-stage buffer (stageB):
 /// clip.h's output starts as sphere-space GeoPoints and, after project()
-/// runs, holds planar Points at those exact same slots. GeoPoint and Point
-/// must never be conflated at the type level (see geo_point.h/point.h)
-/// even though they happen to share the same in-memory shape (two
-/// floats), so the element type is the union below, whose read/write side
-/// (.geo vs .point) makes which interpretation is live explicit at each
-/// point in the pipeline, rather than an implicit reinterpret_cast. This
-/// is well-defined, portable C++ (GeoPoint and Point are both
-/// standard-layout structs sharing a common initial sequence of two
-/// floats) and keeps project() a true in-place transform over stageB's
-/// storage.
+/// runs, holds planar Points at those exact same slots -- one raw
+/// two-float shape reused for both, so the reuse itself costs nothing
+/// beyond the 8 bytes either representation alone would need.
 
 namespace wrenium::geo::detail {
 
-/// Storage for one point that's either sphere-space (GeoPoint, via #geo)
-/// or planar/projected (Point, via #point), never both at once -- see
-/// this file's own overview comment for why a union is used here.
-union PointStorage
+/// Storage for one point that's either sphere-space (GeoPoint, read via
+/// #geo()) or planar/projected (Point's x/y, read/written directly),
+/// never both at once -- see this file's own overview comment for why one
+/// slot is reused instead of two. Plain fields rather than a union of
+/// GeoPoint/Point: switching a union's active member isn't usable inside
+/// a C++17 constant expression, and this same storage backs Workspace's
+/// stageB (workspace.h), which project() (azimuthal_pipeline.h,
+/// cylindrical_pipeline.h) transforms in place.
+struct PointStorage
 {
-    GeoPoint geo;
-    Point point;
+    float x = 0.0f;
+    float y = 0.0f;
 
-    PointStorage()
-        : geo()
+    constexpr PointStorage() = default;
+
+    /// Seeds this slot from a sphere-space point -- x/y hold latRad/lonRad
+    /// until project() overwrites them with planar coordinates instead.
+    constexpr explicit PointStorage(const GeoPoint &g)
+        : x(g.latRad), y(g.lonRad)
     {
     }
 
-    explicit PointStorage(const GeoPoint &g)
-        : geo(g)
+    /// Overwrites this slot with a planar point -- how project() turns a
+    /// rotated GeoPoint slot into its final output Point.
+    constexpr PointStorage &operator=(const Point &p)
     {
+        x = p.x;
+        y = p.y;
+        return *this;
+    }
+
+    /// Reads this slot as a sphere-space point -- valid before project()
+    /// has overwritten it with planar coordinates.
+    constexpr GeoPoint geo() const
+    {
+        return GeoPoint{x, y};
     }
 };
 
