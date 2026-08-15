@@ -12,9 +12,10 @@
 
 // Serializes decoded rings into the exact byte layout defined by
 // include/wrenium/geo/input_format.h (wrenium::geo::InputGeometryHeader + flat ring
-// list), then writes that same byte buffer out as either a raw .bin file
-// or a generated C++ header -- both derived from one in-memory encode, so
-// the geometry is never decoded/encoded twice.
+// list), then writes that same byte buffer out three ways -- a raw .bin
+// file, a generated C++ data header, and a separate, tiny generated C++
+// info header -- all derived from one in-memory encode, so the geometry
+// is never decoded/encoded twice.
 
 namespace wrenium_geo_convert {
 
@@ -30,15 +31,18 @@ void writeBinaryFile(const std::string &path, const std::vector<std::uint8_t> &b
 
 // Writes a generated C++ header at `path` containing
 // `static constexpr std::uint8_t <arrayName>[]` with the identical bytes,
-// so a build can #include the data directly with zero runtime file I/O.
-// Also emits `<arrayName>Info`, an anonymous data/size/pointCount/
-// ringCount/maxRingPointCount struct -- a consumer's
-// InputGeometry<MaxPoints, MaxRings> (input_format.h) needs to fit this
-// exact dataset, and a Workspace's own MaxRingPoints needs to fit this
-// dataset's single largest ring/run; both are only ever known here, at
-// generation time, from the decoded rings themselves -- not re-derivable
-// from the encoded byte buffer alone without re-parsing it. Throws
-// std::runtime_error on failure to open/write.
-void writeHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes, std::size_t pointCount, std::size_t ringCount, std::size_t maxRingPointCount);
+// plus a `<arrayName>Size` constant, so a build can #include the data
+// directly with zero runtime file I/O. Throws std::runtime_error on
+// failure to open/write.
+void writeDataHeaderFile(const std::string &path, const std::string &arrayName, const std::vector<std::uint8_t> &bytes);
+
+// Writes a second, tiny generated C++ header at `path` containing
+// `<arrayName>Info`, an anonymous pointCount/ringCount/maxRingPointCount
+// struct: the capacity InputGeometry<MaxPoints, MaxRings>/a Workspace's
+// own MaxRingPoints need for this dataset, standalone. These counts are
+// only ever known here, at generation time, from the decoded rings
+// themselves -- not re-derivable from the encoded byte buffer alone
+// without re-parsing it. Throws std::runtime_error on failure to open/write.
+void writeInfoHeaderFile(const std::string &path, const std::string &arrayName, std::size_t pointCount, std::size_t ringCount, std::size_t maxRingPointCount);
 
 } // namespace wrenium_geo_convert

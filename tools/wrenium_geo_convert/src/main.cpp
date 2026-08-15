@@ -28,15 +28,19 @@ nlohmann::json loadJsonFile(const std::string &path)
 
 void printUsage(const char *programName)
 {
-    std::cerr << "usage: " << programName << " [--mesh] <input.topojson> <object-name> <output.bin> <output.h> [array-name]\n"
-              << "  --mesh          decode object-name as a countries-style GeometryCollection and\n"
-              << "                  emit only its interior (country-to-country) shared-arc border\n"
-              << "                  segments as open polylines, instead of closed coastline rings\n"
-              << "  input.topojson  path to a TopoJSON file (e.g. world-atlas's land-110m.json)\n"
-              << "  object-name     key under \"objects\" to convert (e.g. \"land\", or \"countries\" with --mesh)\n"
-              << "  output.bin      path to write the raw binary geometry (input_format.h layout)\n"
-              << "  output.h        path to write the generated C++ byte-array header\n"
-              << "  array-name      optional C++ array identifier (default: kWreniumGeoCoastlineData)\n";
+    std::cerr << "usage: " << programName << " [--mesh] <input.topojson> <object-name> <output.bin> <output-data.h> <output-info.h> [array-name]\n"
+              << "  --mesh           decode object-name as a countries-style GeometryCollection and\n"
+              << "                   emit only its interior (country-to-country) shared-arc border\n"
+              << "                   segments as open polylines, instead of closed coastline rings\n"
+              << "  input.topojson   path to a TopoJSON file (e.g. world-atlas's land-110m.json)\n"
+              << "  object-name      key under \"objects\" to convert (e.g. \"land\", or \"countries\" with --mesh)\n"
+              << "  output.bin       path to write the raw binary geometry (input_format.h layout)\n"
+              << "  output-data.h    path to write the generated C++ byte-array header\n"
+              << "  output-info.h    path to write the generated C++ point/ring-count header --\n"
+              << "                   deliberately separate from output-data.h (no #include between\n"
+              << "                   them), so a consumer that only needs sizing info, not the\n"
+              << "                   embedded byte array, can use just this one\n"
+              << "  array-name       optional C++ array identifier (default: kWreniumGeoCoastlineData)\n";
 }
 
 } // namespace
@@ -51,7 +55,7 @@ int main(int argc, char *argv[])
     }
     const int remaining = argc - argi;
 
-    if (remaining != 4 && remaining != 5) {
+    if (remaining != 5 && remaining != 6) {
         printUsage(argv[0]);
         return EXIT_FAILURE;
     }
@@ -59,8 +63,9 @@ int main(int argc, char *argv[])
     const std::string inputPath = argv[argi];
     const std::string objectName = argv[argi + 1];
     const std::string outputBinPath = argv[argi + 2];
-    const std::string outputHeaderPath = argv[argi + 3];
-    const std::string arrayName = (remaining == 5) ? argv[argi + 4] : "kWreniumGeoCoastlineData";
+    const std::string outputDataHeaderPath = argv[argi + 3];
+    const std::string outputInfoHeaderPath = argv[argi + 4];
+    const std::string arrayName = (remaining == 6) ? argv[argi + 5] : "kWreniumGeoCoastlineData";
 
     try {
         const nlohmann::json topology = loadJsonFile(inputPath);
@@ -82,14 +87,16 @@ int main(int argc, char *argv[])
         const std::vector<std::uint8_t> bytes = wrenium_geo_convert::encodeGeometry(rings);
 
         wrenium_geo_convert::writeBinaryFile(outputBinPath, bytes);
-        wrenium_geo_convert::writeHeaderFile(outputHeaderPath, arrayName, bytes, totalPoints, rings.size(), maxRingPoints);
+        wrenium_geo_convert::writeDataHeaderFile(outputDataHeaderPath, arrayName, bytes);
+        wrenium_geo_convert::writeInfoHeaderFile(outputInfoHeaderPath, arrayName, totalPoints, rings.size(), maxRingPoints);
 
         std::cout << "topojson2bin: decoded " << rings.size() << (meshMode ? " border segments, " : " rings, ")
                   << totalPoints << " points total, largest single "
                   << (meshMode ? "segment " : "ring ") << maxRingPoints << " points ("
                   << bytes.size() << " bytes)\n"
                   << "  wrote " << outputBinPath << "\n"
-                  << "  wrote " << outputHeaderPath << "\n";
+                  << "  wrote " << outputDataHeaderPath << "\n"
+                  << "  wrote " << outputInfoHeaderPath << "\n";
     } catch (const std::exception &e) {
         std::cerr << "topojson2bin: error: " << e.what() << "\n";
         return EXIT_FAILURE;
