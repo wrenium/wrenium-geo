@@ -124,4 +124,90 @@ inline Error appendFixedFloat(Buffer<char, Capacity> &out, float value)
     return Error::Ok;
 }
 
+/// Characters one coordinate needs from appendFixedFloat(), given the
+/// largest absolute value it will ever be: sign + integer digits + '.' +
+/// #kFloatFormatDecimalPlaces.
+///
+/// Two things this accounts for that a naive digit-count wouldn't:
+/// - The sign byte is always budgeted, even if @p maxAbsValue happens to
+///   be reached only by a positive coordinate -- projected output is
+///   centered on (0, 0), so real data isn't one-sided.
+/// - Rounding: a value that rounds up into an extra digit (e.g.
+///   999.9996 -> "1000.000") is accounted for, not just the raw magnitude.
+/// @param maxAbsValue The largest |coordinate| that will ever be formatted.
+/// @return Characters for one coordinate -- not a full "x,y " point. See
+/// #svgOutputCharCapacityForRings/#svgOutputCharCapacityForLines for a
+/// ready-to-use Workspace OutputCharCapacity instead of composing this by
+/// hand.
+constexpr std::size_t svgCharsForMaxCoordinate(float maxAbsValue)
+{
+    constexpr std::uint32_t kScale = 1000;
+    const float absValue = maxAbsValue < 0.0f ? -maxAbsValue : maxAbsValue;
+    // Mirrors appendFixedFloat()'s own rounding exactly -- see that
+    // function's identical NOLINT for why add-0.5-then-truncate is exact
+    // round-half-up here, not an actual rounding bug.
+    // NOLINTNEXTLINE(bugprone-incorrect-roundings)
+    const std::uint32_t scaledTotal = static_cast<std::uint32_t>(absValue * static_cast<float>(kScale) + 0.5f);
+    std::uint32_t integerPart = scaledTotal / kScale;
+
+    std::size_t intDigits = 1; // appendFixedFloat's own digit loop always emits at least one
+    while (integerPart >= 10) {
+        integerPart /= 10;
+        ++intDigits;
+    }
+
+    return 1 /* sign */ + intDigits + 1 /* '.' */ + static_cast<std::size_t>(kFloatFormatDecimalPlaces);
+}
+
+/// A correctly-sized OutputCharCapacity (workspace.h) for emitSvgPath()'s
+/// closed-ring output, computed from the shape of what you'll actually
+/// draw: @p maxPoints points across @p maxRings rings, no coordinate
+/// larger than @p maxAbsCoordinate. Workspace's own default (a flat 24
+/// bytes/point) is a guess; this is computed from numbers you already
+/// know instead.
+///
+/// Usage -- override Workspace's 4th template parameter directly:
+/// `Workspace<6000, 200, 6000, svgOutputCharCapacityForRings(6000, 200, 400.0f)>`.
+/// @param maxPoints See Workspace's own MaxPoints.
+/// @param maxRings See Workspace's own MaxRings.
+/// @param maxAbsCoordinate The largest |x| or |y| your output will ever
+/// reach. For azimuthal output going through makeViewport() (viewport.h),
+/// that's just viewportRadiusPx -- clipRadiusKm cancels out of that
+/// helper's own scale formula, so it doesn't factor in here at all.
+// maxPoints/maxRings/maxAbsCoordinate are documented and always passed in
+// this order (matching Workspace's own MaxPoints/MaxRings order, plus the
+// magnitude bound last) -- reordering one alone would be its own hazard.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+constexpr std::size_t svgOutputCharCapacityForRings(std::size_t maxPoints, std::size_t maxRings, float maxAbsCoordinate)
+{
+    const std::size_t coordChars = svgCharsForMaxCoordinate(maxAbsCoordinate);
+    // Per point: two coordinates + ',' + trailing ' '.
+    const std::size_t perPoint = (2 * coordChars) + 2;
+    // Per ring: "M " (2, first point only) + " L" (2, first point only) +
+    // "Z " (2, ring close) -- see emitSvgPath's own walk.
+    constexpr std::size_t kPerRingOverhead = 6;
+    return (maxPoints * perPoint) + (maxRings * kPerRingOverhead);
+}
+
+/// Same as #svgOutputCharCapacityForRings, for emitSvgLinePath()'s
+/// (svg_emitter.h) open-polyline output instead -- never closed with a
+/// "Z" (see that function's own comment for why), so its per-run overhead
+/// is smaller.
+/// @param maxPoints See Workspace's own MaxPoints.
+/// @param maxRuns The largest number of independent open runs -- pass
+/// Workspace's own MaxRings (ringSizesB holds run sizes here, same slot
+/// it holds ring sizes for the closed case).
+/// @param maxAbsCoordinate See #svgOutputCharCapacityForRings's identical
+/// parameter.
+// See svgOutputCharCapacityForRings's identical parameter-order rationale.
+// NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+constexpr std::size_t svgOutputCharCapacityForLines(std::size_t maxPoints, std::size_t maxRuns, float maxAbsCoordinate)
+{
+    const std::size_t coordChars = svgCharsForMaxCoordinate(maxAbsCoordinate);
+    const std::size_t perPoint = (2 * coordChars) + 2;
+    // Per run: "M " (2) + " L" (2) for the first point only -- no "Z" close.
+    constexpr std::size_t kPerRunOverhead = 4;
+    return (maxPoints * perPoint) + (maxRuns * kPerRunOverhead);
+}
+
 } // namespace wrenium::geo
