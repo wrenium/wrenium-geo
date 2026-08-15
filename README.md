@@ -155,7 +155,10 @@ full showcase applications for people *evaluating* it.
 
 `topojson2bin` converts a TopoJSON file into wrenium-geo's binary
 input-geometry format. Each run writes the same data out twice: a raw
-`.bin` file, and a generated C++ header to `#include` directly.
+`.bin` file, and a generated C++ header to `#include` directly -- the
+header also declares `<array-name>Info`, a `data`/`size`/`pointCount`/
+`ringCount` struct computed from the decoded rings at generation time
+(see workspace.h's own "Sizing a Workspace" comment for how to use it).
 
 `topojson2bin` expects **quantized TopoJSON** -- the default output of
 tools like `topojson-server`/`mapshaper` (and what
@@ -227,15 +230,23 @@ three calls a caller re-runs on every pan/zoom, just with a different
 #include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/workspace.h>
 
-constexpr std::size_t kMaxPoints = 6000; // sized for the dataset being loaded
-constexpr std::size_t kMaxRings = 200;
+#include "coastline.h" // topojson2bin's generated header -- see "TopoJSON
+                        // converter" above; declares kWreniumGeoCoastlineData
+                        // and kWreniumGeoCoastlineDataInfo
+
+// InputGeometry's capacity is exact -- kWreniumGeoCoastlineDataInfo already
+// computed it. Workspace gets a documented margin on top of that; see
+// workspace.h's own "Sizing a Workspace" comment for why, and how to
+// finetune both further for a RAM-constrained target.
+constexpr std::size_t kMaxPoints = kWreniumGeoCoastlineDataInfo.pointCount + 1000;
+constexpr std::size_t kMaxRings = kWreniumGeoCoastlineDataInfo.ringCount + 50;
 
 wrenium::geo::Workspace<kMaxPoints, kMaxRings> coastline;   // working buffers + output, reused across calls
 wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> coastlineInput;   // the loaded, unprojected coastline rings
 
-// Parse the coastline data once (e.g. topojson2bin's generated header) --
-// it doesn't change between recomputes below, only center/radius do.
-wrenium::geo::loadInputGeometry(coastlineBytes, coastlineByteCount, coastlineInput);
+// Parse the coastline data once -- it doesn't change between recomputes
+// below, only center/radius do.
+wrenium::geo::loadInputGeometry(kWreniumGeoCoastlineDataInfo.data, kWreniumGeoCoastlineDataInfo.size, coastlineInput);
 
 // Where to center the map (Helsinki), and how much of the world around it
 // to include and how large to draw it.
