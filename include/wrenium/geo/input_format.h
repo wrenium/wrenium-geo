@@ -33,6 +33,14 @@
 ///       uint32_t pointCount
 ///       pointCount x GeoPoint   (latRad, lonRad)
 ///   }
+///
+/// Sizing InputGeometry<MaxPoints, MaxRings>: it holds your entire
+/// checked-in dataset, so its capacity has to fit that dataset exactly --
+/// use the point/ring counts `topojson2bin` generates alongside the
+/// dataset itself (`<name>Info.pointCount`/`.ringCount`), never a
+/// hand-copied number. See workspace.h's own "Sizing a Workspace" comment
+/// for the fuller methodology, including how Workspace's own capacity
+/// (usually sized together with InputGeometry) differs from this one.
 
 namespace wrenium::geo {
 
