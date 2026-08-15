@@ -63,26 +63,11 @@ struct InputGeometryHeader
     std::uint32_t ringCount = 0;                   ///< Number of rings that follow.
 };
 
-/// A loaded, in-memory input dataset -- what loadInputGeometry() fills and
-/// azimuthal::projectRings() / azimuthal::projectLines()
-/// (azimuthal_pipeline.h) or cylindrical::projectRings() /
-/// cylindrical::projectLines() (cylindrical_pipeline.h) read from. Bundles
-/// the point list with its per-ring metadata into one value so they're
-/// always passed (and can't accidentally be mismatched) together.
-/// @tparam MaxPoints Capacity of #points.
-/// @tparam MaxRings Capacity of #ringSizes/#ringMinLat/#ringMaxLat.
 template <std::size_t MaxPoints, std::size_t MaxRings>
-struct InputGeometry
-{
-    /// Flattened points, one entry per point across all rings.
-    Buffer<GeoPoint, MaxPoints> points;
-    /// Each ring's point count, one entry per ring.
-    Buffer<std::size_t, MaxRings> ringSizes;
-    /// Each ring's minimum latitude (radians), one entry per ring.
-    Buffer<float, MaxRings> ringMinLat;
-    /// Each ring's maximum latitude (radians), one entry per ring.
-    Buffer<float, MaxRings> ringMaxLat;
-};
+struct InputGeometry;
+
+template <std::size_t MaxPoints, std::size_t MaxRings>
+inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, InputGeometry<MaxPoints, MaxRings> &geometry);
 
 /// Parses this file's own wire layout (InputGeometryHeader + ring_count x
 /// { pointCount, pointCount x GeoPoint }, little-endian) out of a raw byte
@@ -181,5 +166,59 @@ inline Error loadInputGeometry(const std::uint8_t *data, std::size_t byteCount, 
 
     return Error::Ok;
 }
+
+/// A loaded, in-memory input dataset -- what loadInputGeometry() fills and
+/// azimuthal::projectRings() / azimuthal::projectLines()
+/// (azimuthal_pipeline.h) or cylindrical::projectRings() /
+/// cylindrical::projectLines() (cylindrical_pipeline.h) read from. Bundles
+/// the point list with its per-ring metadata into one value so they're
+/// always passed (and can't accidentally be mismatched) together.
+/// @tparam MaxPoints Capacity of #points.
+/// @tparam MaxRings Capacity of #ringSizes/#ringMinLat/#ringMaxLat.
+template <std::size_t MaxPoints, std::size_t MaxRings>
+struct InputGeometry
+{
+    /// Flattened points, one entry per point across all rings.
+    Buffer<GeoPoint, MaxPoints> points;
+    /// Each ring's point count, one entry per ring.
+    Buffer<std::size_t, MaxRings> ringSizes;
+    /// Each ring's minimum latitude (radians), one entry per ring.
+    Buffer<float, MaxRings> ringMinLat;
+    /// Each ring's maximum latitude (radians), one entry per ring.
+    Buffer<float, MaxRings> ringMaxLat;
+
+    /// Parses @p data/@p byteCount (loadInputGeometry(), above) the first
+    /// time this succeeds; every call after that returns Error::Ok
+    /// immediately without touching this object or re-parsing anything,
+    /// including calls with different @p data/@p byteCount -- the whole
+    /// point is that the caller's own data never actually changes. The
+    /// checked-in coastline/border data is exactly this case: it doesn't
+    /// change between recomputes, only center/clipRadiusRad do, so
+    /// re-parsing it on every call would be pure waste. A call that fails
+    /// isn't remembered as failed: the next call retries the parse from
+    /// scratch, same as calling loadInputGeometry() directly would.
+    /// @param data Raw wire bytes -- see loadInputGeometry()'s identical parameter.
+    /// @param byteCount Number of bytes at @p data.
+    /// @return Error::Ok if this object is now loaded (this call or an
+    /// earlier one); otherwise whatever loadInputGeometry() itself returned.
+    Error ensureLoaded(const std::uint8_t *data, std::size_t byteCount)
+    {
+        if (m_loaded) {
+            return Error::Ok;
+        }
+        const Error err = loadInputGeometry(data, byteCount, *this);
+        m_loaded = (err == Error::Ok);
+        return err;
+    }
+
+    /// True once ensureLoaded() has succeeded, from this call or an earlier one.
+    bool isLoaded() const
+    {
+        return m_loaded;
+    }
+
+private:
+    bool m_loaded = false;
+};
 
 } // namespace wrenium::geo

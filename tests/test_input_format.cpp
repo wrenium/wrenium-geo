@@ -240,3 +240,47 @@ TEST_CASE("loadInputGeometry reports Error::CapacityExceeded when total point co
     CHECK(err == Error::CapacityExceeded);
     CHECK(geometry.points.size() <= geometry.points.capacity());
 }
+
+TEST_CASE("InputGeometry::ensureLoaded parses only on its first successful call")
+{
+    Buffer<std::uint8_t, 64> bytes;
+    writeHeader(bytes, kInputGeometryMagic, kInputGeometryVersion, 1);
+    const GeoPoint ring[] = {{0.1f, 0.2f}, {0.3f, 0.4f}};
+    appendRing(bytes, ring, 2);
+
+    InputGeometry<16, 4> geometry;
+    CHECK_FALSE(geometry.isLoaded());
+
+    CHECK(geometry.ensureLoaded(bytes.data(), bytes.size()) == Error::Ok);
+    CHECK(geometry.isLoaded());
+    REQUIRE(geometry.points.size() == 2);
+    CHECK(geometry.points[0].latRad == doctest::Approx(0.1f));
+
+    // A second call, even with entirely different (here: garbage) bytes,
+    // is a no-op -- the already-loaded geometry is left exactly as it was.
+    const std::uint8_t garbage[] = {0xDE, 0xAD, 0xBE, 0xEF};
+    CHECK(geometry.ensureLoaded(garbage, sizeof(garbage)) == Error::Ok);
+    REQUIRE(geometry.points.size() == 2);
+    CHECK(geometry.points[0].latRad == doctest::Approx(0.1f));
+}
+
+TEST_CASE("InputGeometry::ensureLoaded retries on the next call after a failed one, not stuck permanently")
+{
+    Buffer<std::uint8_t, 32> badBytes;
+    writeHeader(badBytes, 0xDEADBEEFu, kInputGeometryVersion, 0); // wrong magic
+
+    Buffer<std::uint8_t, 64> goodBytes;
+    writeHeader(goodBytes, kInputGeometryMagic, kInputGeometryVersion, 1);
+    const GeoPoint ring[] = {{0.5f, 0.6f}};
+    appendRing(goodBytes, ring, 1);
+
+    InputGeometry<16, 4> geometry;
+
+    CHECK(geometry.ensureLoaded(badBytes.data(), badBytes.size()) == Error::UnrecognizedFormat);
+    CHECK_FALSE(geometry.isLoaded());
+
+    CHECK(geometry.ensureLoaded(goodBytes.data(), goodBytes.size()) == Error::Ok);
+    CHECK(geometry.isLoaded());
+    REQUIRE(geometry.points.size() == 1);
+    CHECK(geometry.points[0].latRad == doctest::Approx(0.5f));
+}

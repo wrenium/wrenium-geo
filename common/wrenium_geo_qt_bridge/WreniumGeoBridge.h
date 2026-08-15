@@ -232,20 +232,15 @@ private:
     static constexpr std::size_t kOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForRings(kMaxPoints, kMaxRings, kMaxViewportPx);
     static constexpr std::size_t kBorderOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForLines(kMaxBorderPoints, kMaxBorderRings, kMaxViewportPx);
 
-    bool loadInputOnce();
-    bool loadBorderInputOnce();
-
     wrenium::geo::Workspace<kMaxPoints, kMaxRings, kMaxRingPoints, kOutputCharCapacity> m_workspace;
-    // Points plus each ring's own [minLat, maxLat], loaded once by
-    // loadInputGeometry (input_format.h) instead of rescanned by
+    // Points plus each ring's own [minLat, maxLat], loaded once (on the
+    // first ensureLoaded() call, input_format.h) instead of reparsed by
     // azimuthal::projectRings on every recompute -- see that function's
     // own comment for the measured saving.
     wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> m_input;
     wrenium::geo::Buffer<std::uint8_t, kMaxBinaryBytes> m_binaryPath;
-    bool m_inputLoaded = false;
 
     wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings, kMaxBorderRingPoints, kBorderOutputCharCapacity> m_borderWorkspace;
     wrenium::geo::InputGeometry<kMaxBorderPoints, kMaxBorderRings> m_borderInput;
     wrenium::geo::Buffer<std::uint8_t, kMaxBorderBinaryBytes> m_borderBinaryPath;
-    bool m_borderInputLoaded = false;
 };

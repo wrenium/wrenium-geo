@@ -229,9 +229,8 @@ three calls a caller re-runs on every pan/zoom, just with a different
 `center`/`clipRadiusRad`.
 
 ```cpp
-#include <wrenium/geo/azimuthal_pipeline.h>
+#include <wrenium/geo/azimuthal_svg.h>
 #include <wrenium/geo/input_format.h>
-#include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/workspace.h>
 
 // topojson2bin's two generated headers -- see "TopoJSON converter" above.
@@ -249,26 +248,24 @@ constexpr std::size_t kMaxPoints = kWreniumGeoCoastlineDataInfo.pointCount + 100
 constexpr std::size_t kMaxRings = kWreniumGeoCoastlineDataInfo.ringCount + 50;
 
 wrenium::geo::Workspace<kMaxPoints, kMaxRings> coastline;   // working buffers + output, reused across calls
-wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> coastlineInput;   // the loaded, unprojected coastline rings
+wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> coastlineInput;   // parsed once, reused across calls
 
-// Parse the coastline data once -- it doesn't change between recomputes
-// below, only center/radius do.
-wrenium::geo::loadInputGeometry(kWreniumGeoCoastlineData, kWreniumGeoCoastlineDataSize, coastlineInput);
+// Called on every pan/zoom -- ensureLoaded() only actually parses the
+// coastline data the first time this runs, so there's no separate init
+// step to remember.
+void recomputeMap(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx)
+{
+    coastlineInput.ensureLoaded(kWreniumGeoCoastlineData, kWreniumGeoCoastlineDataSize);
 
-// Where to center the map (Helsinki), and how much of the world around it
-// to include and how large to draw it.
-const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(60.0f, 25.0f);
-const float clipRadiusKm = 2000.0f;    // how far from center to include
-const float viewportRadiusPx = 400.0f; // that same radius, in output units
-const float clipRadiusRad = clipRadiusKm / wrenium::geo::kEarthRadiusKm;
-const float scale = viewportRadiusPx / clipRadiusKm; // output units per km
+    const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
+    const float clipRadiusRad = static_cast<float>(clipRadiusKm) / wrenium::geo::kEarthRadiusKm;
+    const float scale = static_cast<float>(viewportRadiusPx / clipRadiusKm); // output units per km
 
-// Rotate -> clip -> project every coastline ring, writing the result into coastline.
-wrenium::geo::azimuthal::projectRings(coastline, coastlineInput, center, clipRadiusRad, scale, wrenium::geo::azimuthal::ProjectionType::Equidistant);
-
-// Read the result back out as an SVG path `d` string.
-wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
-                           coastline.projectedRingSizes().size(), coastline.svgPath);
+    // Rotate -> clip -> project every coastline ring, writing the SVG path
+    // `d` string directly into coastline.svgPath.
+    wrenium::geo::azimuthal::projectRingsToSvg(
+        coastline, coastlineInput, center, clipRadiusRad, scale, wrenium::geo::azimuthal::ProjectionType::Equidistant);
+}
 
 // coastline.svgPath now holds "M x,y L x,y ... Z" path data, ready to draw.
 ```
