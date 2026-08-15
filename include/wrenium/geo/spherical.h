@@ -18,6 +18,11 @@
 /// bearing B from A" is exactly unrotate()'s own inverse of that same
 /// representation -- this just reads those results out in more familiar
 /// units instead of re-deriving the same spherical trig a second time.
+///
+/// Also has a few plain degree-space helpers (wrapLongitudeDeg(),
+/// clampLatitudeDeg(), shortestAngleDeltaDeg()) for callers that keep their
+/// own location/bearing state in degrees and need it kept within range
+/// after arithmetic that can push it out.
 
 namespace wrenium::geo {
 
@@ -62,6 +67,50 @@ inline GeoPoint destinationPoint(const GeoPoint &origin, float distanceKm, float
 {
     const float centralAngle = distanceKm / kEarthRadiusKm;
     return azimuthal::unrotate(GeoPoint{kHalfPi - centralAngle, bearingRad}, origin);
+}
+
+/// Wraps @p lonDeg to within `(-180, 180]` degrees -- for a longitude
+/// value pushed out of range by arithmetic (adding a delta past +-180,
+/// for example).
+/// @param lonDeg Longitude in degrees, any range.
+/// @return The equivalent longitude within `(-180, 180]`.
+inline float wrapLongitudeDeg(float lonDeg)
+{
+    while (lonDeg > 180.0f) {
+        lonDeg -= 360.0f;
+    }
+    while (lonDeg <= -180.0f) {
+        lonDeg += 360.0f;
+    }
+    return lonDeg;
+}
+
+/// Clamps @p latDeg to `[-90 + marginDeg, 90 - marginDeg]`.
+/// @param latDeg Latitude in degrees.
+/// @param marginDeg Distance to keep away from each pole, in degrees.
+/// @return @p latDeg unchanged if already within range, otherwise the
+/// bound it crossed.
+inline float clampLatitudeDeg(float latDeg, float marginDeg) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    const float limit = 90.0f - marginDeg;
+    if (latDeg > limit) {
+        return limit;
+    }
+    if (latDeg < -limit) {
+        return -limit;
+    }
+    return latDeg;
+}
+
+/// Shortest signed angle from @p fromDeg to @p toDeg, wrapped to
+/// `(-180, 180]` -- adding this to @p fromDeg reaches @p toDeg by the
+/// shorter way around, positive turning clockwise.
+/// @param fromDeg Starting angle in degrees.
+/// @param toDeg Target angle in degrees.
+/// @return The signed delta, in degrees, within `(-180, 180]`.
+inline float shortestAngleDeltaDeg(float fromDeg, float toDeg) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    return wrapLongitudeDeg(toDeg - fromDeg);
 }
 
 } // namespace wrenium::geo
