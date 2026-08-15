@@ -40,35 +40,11 @@ WreniumGeoBridge::WreniumGeoBridge(QObject *parent)
 {
 }
 
-bool WreniumGeoBridge::loadInputOnce()
-{
-    if (m_inputLoaded) {
-        return true;
-    }
-
-    const wrenium::geo::Error err = wrenium::geo::loadInputGeometry(
-        kWreniumGeoWorldCoastline110m, kWreniumGeoWorldCoastline110mSize, m_input);
-    warnOnError("loadInputOnce: loadInputGeometry", err);
-    m_inputLoaded = (err == wrenium::geo::Error::Ok);
-    return m_inputLoaded;
-}
-
-bool WreniumGeoBridge::loadBorderInputOnce()
-{
-    if (m_borderInputLoaded) {
-        return true;
-    }
-
-    const wrenium::geo::Error err = wrenium::geo::loadInputGeometry(
-        kWreniumGeoWorldBorders110m, kWreniumGeoWorldBorders110mSize, m_borderInput);
-    warnOnError("loadBorderInputOnce: loadInputGeometry", err);
-    m_borderInputLoaded = (err == wrenium::geo::Error::Ok);
-    return m_borderInputLoaded;
-}
-
 QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, bool useOrthographic)
 {
-    if (!loadInputOnce()) {
+    const wrenium::geo::Error loadErr = m_input.ensureLoaded(kWreniumGeoWorldCoastline110m, kWreniumGeoWorldCoastline110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeCoastlineSvgPath: ensureLoaded", loadErr);
         return QString();
     }
     if (clipRadiusKm <= 0.0 || viewportRadiusPx <= 0.0) {
@@ -116,7 +92,9 @@ double WreniumGeoBridge::mercatorMaxLatDeg() const
 
 QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, bool useOrthographic)
 {
-    if (!loadBorderInputOnce()) {
+    const wrenium::geo::Error loadErr = m_borderInput.ensureLoaded(kWreniumGeoWorldBorders110m, kWreniumGeoWorldBorders110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeBorderSvgPath: ensureLoaded", loadErr);
         return QString();
     }
     if (clipRadiusKm <= 0.0 || viewportRadiusPx <= 0.0) {
@@ -192,7 +170,9 @@ double WreniumGeoBridge::distanceKm(double fromLatDeg, double fromLonDeg, double
 
 QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter)
 {
-    if (!loadInputOnce()) {
+    const wrenium::geo::Error loadErr = m_input.ensureLoaded(kWreniumGeoWorldCoastline110m, kWreniumGeoWorldCoastline110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorCoastlineSvgPath: ensureLoaded", loadErr);
         return QString();
     }
     if (halfWidthKm <= 0.0 || viewportWidthPx <= 0.0 || viewportHeightPx <= 0.0) {
@@ -235,7 +215,9 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
 
 QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter)
 {
-    if (!loadBorderInputOnce()) {
+    const wrenium::geo::Error loadErr = m_borderInput.ensureLoaded(kWreniumGeoWorldBorders110m, kWreniumGeoWorldBorders110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorBorderSvgPath: ensureLoaded", loadErr);
         return QString();
     }
     if (halfWidthKm <= 0.0 || viewportWidthPx <= 0.0 || viewportHeightPx <= 0.0) {
