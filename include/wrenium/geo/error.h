@@ -33,4 +33,28 @@ enum class Error
                           ///< unmodified.
 };
 
+/// A short, human-readable description of @p error, for logs/diagnostics --
+/// not meant to be shown to end users as-is. Every enumerator has a
+/// distinct message (see Error's own doc comments above for the fix); an
+/// unrecognized value (only reachable via an invalid enum cast) falls back
+/// to a generic message rather than undefined behavior.
+inline const char *errorToString(Error error)
+{
+    switch (error) {
+    case Error::Ok:
+        return "Ok";
+    case Error::CapacityExceeded:
+        return "CapacityExceeded: a fixed-capacity Buffer/Workspace ran out of room -- increase its capacity template parameter";
+    case Error::TooManyClipCrossings:
+        return "TooManyClipCrossings: a ring crossed the clip boundary more times than the pipeline's fixed tracking limit allows";
+    case Error::UnrecognizedFormat:
+        return "UnrecognizedFormat: a wire stream's magic number or version didn't match what the parser expects";
+    case Error::TruncatedData:
+        return "TruncatedData: a wire stream ended before its header or a structure the header describes was fully read";
+    case Error::MalformedStream:
+        return "MalformedStream: a wire stream's content violates the format's own structure";
+    }
+    return "unrecognized Error value";
+}
+
 } // namespace wrenium::geo
