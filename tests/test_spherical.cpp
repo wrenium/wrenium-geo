@@ -131,3 +131,33 @@ TEST_CASE("destinationPoint/distanceKm/bearingRad round-trip for an arbitrary po
     CHECK(approxEqual(distanceKm(origin, reached), travelKm, kRoundTripToleranceKm));
     CHECK(approxEqual(bearingRad(origin, reached), travelBearing, kRoundTripToleranceRad));
 }
+
+TEST_CASE("wrapLongitudeDeg wraps to (-180, 180]")
+{
+    CHECK(approxEqual(wrapLongitudeDeg(0.0f), 0.0f, kToleranceRad));
+    CHECK(approxEqual(wrapLongitudeDeg(180.0f), 180.0f, kToleranceRad));
+    CHECK(approxEqual(wrapLongitudeDeg(-180.0f), 180.0f, kToleranceRad));
+    CHECK(approxEqual(wrapLongitudeDeg(181.0f), -179.0f, kToleranceRad));
+    CHECK(approxEqual(wrapLongitudeDeg(-181.0f), 179.0f, kToleranceRad));
+    CHECK(approxEqual(wrapLongitudeDeg(540.0f), 180.0f, kToleranceRad));
+    CHECK(approxEqual(wrapLongitudeDeg(-540.0f), 180.0f, kToleranceRad));
+}
+
+TEST_CASE("clampLatitudeDeg keeps latitude within its margin of each pole")
+{
+    CHECK(approxEqual(clampLatitudeDeg(0.0f, 5.0f), 0.0f, kToleranceRad));
+    CHECK(approxEqual(clampLatitudeDeg(80.0f, 5.0f), 80.0f, kToleranceRad));
+    CHECK(approxEqual(clampLatitudeDeg(89.9f, 5.0f), 85.0f, kToleranceRad));
+    CHECK(approxEqual(clampLatitudeDeg(-89.9f, 5.0f), -85.0f, kToleranceRad));
+    CHECK(approxEqual(clampLatitudeDeg(90.0f, 0.0f), 90.0f, kToleranceRad));
+}
+
+TEST_CASE("shortestAngleDeltaDeg finds the shorter way around")
+{
+    CHECK(approxEqual(shortestAngleDeltaDeg(0.0f, 90.0f), 90.0f, kToleranceRad));
+    CHECK(approxEqual(shortestAngleDeltaDeg(0.0f, -90.0f), -90.0f, kToleranceRad));
+    CHECK(approxEqual(shortestAngleDeltaDeg(350.0f, 10.0f), 20.0f, kToleranceRad));
+    CHECK(approxEqual(shortestAngleDeltaDeg(10.0f, 350.0f), -20.0f, kToleranceRad));
+    CHECK(approxEqual(shortestAngleDeltaDeg(0.0f, 180.0f), 180.0f, kToleranceRad));
+    CHECK(approxEqual(shortestAngleDeltaDeg(45.0f, 45.0f), 0.0f, kToleranceRad));
+}
