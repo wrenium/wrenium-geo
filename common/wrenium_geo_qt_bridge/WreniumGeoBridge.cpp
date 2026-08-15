@@ -6,14 +6,14 @@
 #include <QDebug>
 
 #include <wrenium/geo/azimuthal_pipeline.h>
+#include <wrenium/geo/azimuthal_svg.h>
 #include <wrenium/geo/binary_emitter.h>
 #include <wrenium/geo/cylindrical_pipeline.h>
-#include <wrenium/geo/detail/azimuthal/orthographic.h>
+#include <wrenium/geo/cylindrical_svg.h>
 #include <wrenium/geo/detail/cylindrical/mercator.h>
 #include <wrenium/geo/error.h>
 #include <wrenium/geo/projection.h>
 #include <wrenium/geo/spherical.h>
-#include <wrenium/geo/svg_emitter.h>
 #include <wrenium/geo/viewport.h>
 
 #include "BinaryPathDecoder.h"
@@ -79,29 +79,25 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
     const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
-    const wrenium::geo::Error pipelineErr = wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
-    if (pipelineErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeCoastlineSvgPath: projectRings", pipelineErr);
-        return QString();
-    }
 
-    wrenium::geo::Error emitErr;
+    wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        emitErr = wrenium::geo::emitSvgPath(
-            m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
-            m_workspace.projectedRingSizes().size(), m_workspace.svgPath);
+        err = wrenium::geo::azimuthal::projectRingsToSvg(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     } else {
-        emitErr = wrenium::geo::BinaryPathEmitter<>::encode(
-            m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
-            m_workspace.projectedRingSizes().size(), m_binaryPath);
-        if (emitErr == wrenium::geo::Error::Ok) {
-            emitErr = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+        err = wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::BinaryPathEmitter<>::encode(
+                m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
+                m_workspace.projectedRingSizes().size(), m_binaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
                 m_binaryPath.data(), m_binaryPath.size(), m_workspace.svgPath);
         }
     }
 
-    if (emitErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeCoastlineSvgPath: emit", emitErr);
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeCoastlineSvgPath", err);
         return QString();
     }
 
@@ -131,29 +127,25 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
 
     const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
-    const wrenium::geo::Error pipelineErr = wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
-    if (pipelineErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeBorderSvgPath: projectLines", pipelineErr);
-        return QString();
-    }
 
-    wrenium::geo::Error emitErr;
+    wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        emitErr = wrenium::geo::emitSvgLinePath(
-            m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
-            m_borderWorkspace.projectedRingSizes().size(), m_borderWorkspace.svgPath);
+        err = wrenium::geo::azimuthal::projectLinesToSvg(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     } else {
-        emitErr = wrenium::geo::LineBinaryPathEmitter<>::encode(
-            m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
-            m_borderWorkspace.projectedRingSizes().size(), m_borderBinaryPath);
-        if (emitErr == wrenium::geo::Error::Ok) {
-            emitErr = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+        err = wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::LineBinaryPathEmitter<>::encode(
+                m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
+                m_borderWorkspace.projectedRingSizes().size(), m_borderBinaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
                 m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderWorkspace.svgPath);
         }
     }
 
-    if (emitErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeBorderSvgPath: emit", emitErr);
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeBorderSvgPath", err);
         return QString();
     }
 
@@ -217,29 +209,24 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
     const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
     const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
 
-    const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectRings(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
-    if (pipelineErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeMercatorCoastlineSvgPath: projectRings", pipelineErr);
-        return QString();
-    }
-
-    wrenium::geo::Error emitErr;
+    wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        emitErr = wrenium::geo::emitSvgPath(
-            m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
-            m_workspace.projectedRingSizes().size(), m_workspace.svgPath);
+        err = wrenium::geo::cylindrical::projectRingsToSvg(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
     } else {
-        emitErr = wrenium::geo::BinaryPathEmitter<>::encode(
-            m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
-            m_workspace.projectedRingSizes().size(), m_binaryPath);
-        if (emitErr == wrenium::geo::Error::Ok) {
-            emitErr = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+        err = wrenium::geo::cylindrical::projectRings(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::BinaryPathEmitter<>::encode(
+                m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
+                m_workspace.projectedRingSizes().size(), m_binaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
                 m_binaryPath.data(), m_binaryPath.size(), m_workspace.svgPath);
         }
     }
 
-    if (emitErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeMercatorCoastlineSvgPath: emit", emitErr);
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorCoastlineSvgPath", err);
         return QString();
     }
 
@@ -262,29 +249,24 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
     const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
     const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
 
-    const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectLines(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
-    if (pipelineErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeMercatorBorderSvgPath: projectLines", pipelineErr);
-        return QString();
-    }
-
-    wrenium::geo::Error emitErr;
+    wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        emitErr = wrenium::geo::emitSvgLinePath(
-            m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
-            m_borderWorkspace.projectedRingSizes().size(), m_borderWorkspace.svgPath);
+        err = wrenium::geo::cylindrical::projectLinesToSvg(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
     } else {
-        emitErr = wrenium::geo::LineBinaryPathEmitter<>::encode(
-            m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
-            m_borderWorkspace.projectedRingSizes().size(), m_borderBinaryPath);
-        if (emitErr == wrenium::geo::Error::Ok) {
-            emitErr = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+        err = wrenium::geo::cylindrical::projectLines(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::LineBinaryPathEmitter<>::encode(
+                m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
+                m_borderWorkspace.projectedRingSizes().size(), m_borderBinaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
                 m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderWorkspace.svgPath);
         }
     }
 
-    if (emitErr != wrenium::geo::Error::Ok) {
-        warnOnError("computeMercatorBorderSvgPath: emit", emitErr);
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorBorderSvgPath", err);
         return QString();
     }
 
