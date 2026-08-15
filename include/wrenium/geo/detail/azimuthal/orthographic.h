@@ -32,7 +32,7 @@ namespace wrenium::geo::azimuthal {
 /// kEarthRadiusKm * sin(centralAngle) * @p scale, reaching its maximum
 /// (kEarthRadiusKm * scale) exactly at the horizon, centralAngle == kHalfPi.
 /// @return The planar (x, y) projection.
-inline Point projectOrthographic(const GeoPoint &rotatedPoint, float scale)
+constexpr Point projectOrthographic(const GeoPoint &rotatedPoint, float scale)
 {
     const float centralAngle = kHalfPi - rotatedPoint.latRad;
     const float bearing = rotatedPoint.lonRad;
@@ -40,7 +40,7 @@ inline Point projectOrthographic(const GeoPoint &rotatedPoint, float scale)
     const float radius = kEarthRadiusKm * f32math::sin(centralAngle) * scale;
 
     // Same north-up, compass convention as equidistant.h's projectEquidistant().
-    float sinBearing, cosBearing;
+    float sinBearing = 0.0f, cosBearing = 0.0f;
     f32math::sincos(bearing, sinBearing, cosBearing);
 
     Point projected;

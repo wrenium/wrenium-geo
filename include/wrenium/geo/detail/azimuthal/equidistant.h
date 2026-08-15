@@ -30,7 +30,7 @@ namespace wrenium::geo::azimuthal {
 /// distanceKm * scale, so a caller can reproduce this same formula for
 /// range rings, ticks, etc. using the same @p scale value.
 /// @return The planar (x, y) projection.
-inline Point projectEquidistant(const GeoPoint &rotatedPoint, float scale)
+constexpr Point projectEquidistant(const GeoPoint &rotatedPoint, float scale)
 {
     const float centralAngle = kHalfPi - rotatedPoint.latRad;
     const float bearing = rotatedPoint.lonRad;
@@ -41,7 +41,7 @@ inline Point projectEquidistant(const GeoPoint &rotatedPoint, float scale)
     // North-up, compass convention: bearing 0 (north) -> (0, -radius) (up
     // the screen, since SVG/screen y increases downward); bearing pi/2
     // (east) -> (radius, 0) (right).
-    float sinBearing, cosBearing;
+    float sinBearing = 0.0f, cosBearing = 0.0f;
     f32math::sincos(bearing, sinBearing, cosBearing);
 
     Point projected;
