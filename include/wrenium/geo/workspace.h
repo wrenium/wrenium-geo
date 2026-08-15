@@ -160,9 +160,9 @@ struct Workspace
     /// `projectLines()`. @p index ranges over the same
     /// flattened point list projectedRingSizes() describes -- ring 0's
     /// points first, then ring 1's, and so on.
-    Point projectedPoint(std::size_t index) const
+    constexpr Point projectedPoint(std::size_t index) const
     {
-        return stageB[index].point;
+        return Point{stageB[index].x, stageB[index].y};
     }
 
     /// All final projected points as one contiguous array, flattened
@@ -171,11 +171,13 @@ struct Workspace
     /// emitter) read from.
     const Point *projectedPoints() const
     {
-        // Safe: PointStorage is a union of two standard-layout structs
-        // sharing a common initial sequence (two floats), so reinterpreting
-        // a contiguous run of them through .point is well-defined, and its
-        // size/alignment exactly match Point's (no extra members, no
-        // padding difference).
+        // Safe: PointStorage (detail/point_storage.h) is the same
+        // standard-layout two-float shape as Point, same size/alignment,
+        // no extra members, no padding difference -- so reinterpreting a
+        // contiguous run of them through Point is well-defined. Not
+        // constexpr-eligible itself, though (reinterpret_cast isn't usable
+        // in a constant expression) -- projectedPoint() above is, if that's
+        // what a constexpr caller needs.
         return reinterpret_cast<const Point *>(stageB.data());
     }
 

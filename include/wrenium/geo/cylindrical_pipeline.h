@@ -349,8 +349,8 @@ inline Error projectRings(
                 }
 
                 wrenium::geo::detail::PointStorage storage(current);
-                storage.point.x = unwrappedLonRad * kEarthRadiusKm * scale;
-                storage.point.y = detail::projectY(current.latRad, scale) - centerY;
+                storage.x = unwrappedLonRad * kEarthRadiusKm * scale;
+                storage.y = detail::projectY(current.latRad, scale) - centerY;
                 const Error err = workspace.stageB.pushBack(storage);
                 if (err != Error::Ok) {
                     return err;
@@ -367,12 +367,12 @@ inline Error projectRings(
 
             const std::size_t firstIdx = workspace.stageB.size() - pieceSize;
             const std::size_t lastIdx = workspace.stageB.size() - 1;
-            const float firstX = workspace.stageB[firstIdx].point.x;
-            const float lastX = workspace.stageB[lastIdx].point.x;
+            const float firstX = workspace.stageB[firstIdx].x;
+            const float lastX = workspace.stageB[lastIdx].x;
 
             wrenium::geo::detail::PointStorage cornerNearLast;
-            cornerNearLast.point.x = (lastX >= 0.0f) ? halfWorldWidth : -halfWorldWidth;
-            cornerNearLast.point.y = poleY;
+            cornerNearLast.x = (lastX >= 0.0f) ? halfWorldWidth : -halfWorldWidth;
+            cornerNearLast.y = poleY;
             Error err = workspace.stageB.pushBack(cornerNearLast);
             if (err != Error::Ok) {
                 return err;
@@ -380,8 +380,8 @@ inline Error projectRings(
             ++pieceSize;
 
             wrenium::geo::detail::PointStorage cornerNearFirst;
-            cornerNearFirst.point.x = (firstX >= 0.0f) ? halfWorldWidth : -halfWorldWidth;
-            cornerNearFirst.point.y = poleY;
+            cornerNearFirst.x = (firstX >= 0.0f) ? halfWorldWidth : -halfWorldWidth;
+            cornerNearFirst.y = poleY;
             err = workspace.stageB.pushBack(cornerNearFirst);
             if (err != Error::Ok) {
                 return err;
@@ -422,8 +422,8 @@ inline Error projectRings(
             const GeoPoint &current = ring[idx];
 
             wrenium::geo::detail::PointStorage storage(current);
-            storage.point.x = x * kEarthRadiusKm * scale;
-            storage.point.y = detail::projectY(current.latRad, scale) - centerY;
+            storage.x = x * kEarthRadiusKm * scale;
+            storage.y = detail::projectY(current.latRad, scale) - centerY;
             Error err = workspace.stageB.pushBack(storage);
             if (err != Error::Ok) {
                 return err;
@@ -456,8 +456,8 @@ inline Error projectRings(
             const float exitX = boundary * kEarthRadiusKm * scale;
 
             wrenium::geo::detail::PointStorage exitPoint;
-            exitPoint.point.x = exitX;
-            exitPoint.point.y = crossY;
+            exitPoint.x = exitX;
+            exitPoint.y = crossY;
             Error exitErr = workspace.stageB.pushBack(exitPoint);
             if (exitErr != Error::Ok) {
                 return exitErr;
@@ -485,8 +485,8 @@ inline Error projectRings(
                 const float detourY = detail::projectY(detourLatRad, scale) - centerY;
 
                 wrenium::geo::detail::PointStorage cornerAtExit;
-                cornerAtExit.point.x = exitX;
-                cornerAtExit.point.y = detourY;
+                cornerAtExit.x = exitX;
+                cornerAtExit.y = detourY;
                 Error cornerErr = workspace.stageB.pushBack(cornerAtExit);
                 if (cornerErr != Error::Ok) {
                     return cornerErr;
@@ -494,8 +494,8 @@ inline Error projectRings(
                 ++pieceSize;
 
                 wrenium::geo::detail::PointStorage cornerAtEntry;
-                cornerAtEntry.point.x = (pieceEnteredPositive ? 1.0f : -1.0f) * halfWorldWidth;
-                cornerAtEntry.point.y = detourY;
+                cornerAtEntry.x = (pieceEnteredPositive ? 1.0f : -1.0f) * halfWorldWidth;
+                cornerAtEntry.y = detourY;
                 cornerErr = workspace.stageB.pushBack(cornerAtEntry);
                 if (cornerErr != Error::Ok) {
                     return cornerErr;
@@ -523,8 +523,8 @@ inline Error projectRings(
 
             const float entryX = -boundary * kEarthRadiusKm * scale;
             wrenium::geo::detail::PointStorage entryPoint;
-            entryPoint.point.x = entryX;
-            entryPoint.point.y = crossY;
+            entryPoint.x = entryX;
+            entryPoint.y = crossY;
             const Error entryErr = workspace.stageB.pushBack(entryPoint);
             if (entryErr != Error::Ok) {
                 return entryErr;
@@ -664,8 +664,8 @@ inline Error projectLines(
         float pieceMaxX = x;
 
         wrenium::geo::detail::PointStorage firstStorage(line[0]);
-        firstStorage.point.x = x * kEarthRadiusKm * scale;
-        firstStorage.point.y = detail::projectY(line[0].latRad, scale) - centerY;
+        firstStorage.x = x * kEarthRadiusKm * scale;
+        firstStorage.y = detail::projectY(line[0].latRad, scale) - centerY;
         Error err = workspace.stageB.pushBack(firstStorage);
         if (err != Error::Ok) {
             return err;
@@ -680,8 +680,8 @@ inline Error projectLines(
             if (!step.crossesPositive && !step.crossesNegative) {
                 x = step.candidate;
                 wrenium::geo::detail::PointStorage storage(next);
-                storage.point.x = x * kEarthRadiusKm * scale;
-                storage.point.y = detail::projectY(next.latRad, scale) - centerY;
+                storage.x = x * kEarthRadiusKm * scale;
+                storage.y = detail::projectY(next.latRad, scale) - centerY;
                 const Error pushErr = workspace.stageB.pushBack(storage);
                 if (pushErr != Error::Ok) {
                     return pushErr;
@@ -704,8 +704,8 @@ inline Error projectLines(
             const float exitX = boundary * kEarthRadiusKm * scale;
 
             wrenium::geo::detail::PointStorage exitPoint;
-            exitPoint.point.x = exitX;
-            exitPoint.point.y = crossY;
+            exitPoint.x = exitX;
+            exitPoint.y = crossY;
             Error exitErr = workspace.stageB.pushBack(exitPoint);
             if (exitErr != Error::Ok) {
                 return exitErr;
@@ -729,8 +729,8 @@ inline Error projectLines(
 
             const float entryX = -boundary * kEarthRadiusKm * scale;
             wrenium::geo::detail::PointStorage entryPoint;
-            entryPoint.point.x = entryX;
-            entryPoint.point.y = crossY;
+            entryPoint.x = entryX;
+            entryPoint.y = crossY;
             const Error entryErr = workspace.stageB.pushBack(entryPoint);
             if (entryErr != Error::Ok) {
                 return entryErr;
@@ -749,8 +749,8 @@ inline Error projectLines(
             // whichever step first reaches it).
             x = wrenium::geo::detail::wrapPi(next.lonRad - center.lonRad);
             wrenium::geo::detail::PointStorage afterEntry(next);
-            afterEntry.point.x = x * kEarthRadiusKm * scale;
-            afterEntry.point.y = detail::projectY(next.latRad, scale) - centerY;
+            afterEntry.x = x * kEarthRadiusKm * scale;
+            afterEntry.y = detail::projectY(next.latRad, scale) - centerY;
             const Error afterEntryErr = workspace.stageB.pushBack(afterEntry);
             if (afterEntryErr != Error::Ok) {
                 return afterEntryErr;

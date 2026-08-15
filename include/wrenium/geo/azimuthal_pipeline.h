@@ -207,10 +207,10 @@ inline Error projectRings(
         }
     }
 
-    // ---- project: stageB in place (GeoPoint .geo -> Point .point) ----
+    // ---- project: stageB in place (sphere-space geo() -> planar x/y) ----
     for (std::size_t i = 0; i < workspace.stageB.size(); ++i) {
-        const GeoPoint rotatedClipped = workspace.stageB[i].geo;
-        workspace.stageB[i].point = ProjectFn(rotatedClipped, scale);
+        const GeoPoint rotatedClipped = workspace.stageB[i].geo();
+        workspace.stageB[i] = ProjectFn(rotatedClipped, scale);
     }
 
     return Error::Ok;
@@ -289,10 +289,10 @@ inline Error projectLines(
         inputOffset += lineSize;
     }
 
-    // ---- project: stageB in place (GeoPoint .geo -> Point .point) ----
+    // ---- project: stageB in place (sphere-space geo() -> planar x/y) ----
     for (std::size_t i = 0; i < workspace.stageB.size(); ++i) {
-        const GeoPoint rotatedClipped = workspace.stageB[i].geo;
-        workspace.stageB[i].point = ProjectFn(rotatedClipped, scale);
+        const GeoPoint rotatedClipped = workspace.stageB[i].geo();
+        workspace.stageB[i] = ProjectFn(rotatedClipped, scale);
     }
 
     return Error::Ok;
