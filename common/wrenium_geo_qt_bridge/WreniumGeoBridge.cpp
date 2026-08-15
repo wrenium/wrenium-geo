@@ -3,11 +3,14 @@
 
 #include "WreniumGeoBridge.h"
 
+#include <QDebug>
+
 #include <wrenium/geo/azimuthal_pipeline.h>
 #include <wrenium/geo/binary_emitter.h>
 #include <wrenium/geo/cylindrical_pipeline.h>
 #include <wrenium/geo/detail/azimuthal/orthographic.h>
 #include <wrenium/geo/detail/cylindrical/mercator.h>
+#include <wrenium/geo/error.h>
 #include <wrenium/geo/projection.h>
 #include <wrenium/geo/spherical.h>
 #include <wrenium/geo/svg_emitter.h>
@@ -20,6 +23,15 @@
 namespace {
 
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
+
+// Logs why a pipeline/emit/load call failed instead of leaving the caller
+// with only an empty QString and no clue.
+void warnOnError(const char *context, wrenium::geo::Error error)
+{
+    if (error != wrenium::geo::Error::Ok) {
+        qWarning() << "WreniumGeoBridge:" << context << "failed:" << wrenium::geo::errorToString(error);
+    }
+}
 
 } // namespace
 
@@ -36,6 +48,7 @@ bool WreniumGeoBridge::loadInputOnce()
 
     const wrenium::geo::Error err = wrenium::geo::loadInputGeometry(
         kWreniumGeoWorldCoastline110m, sizeof(kWreniumGeoWorldCoastline110m), m_input);
+    warnOnError("loadInputOnce: loadInputGeometry", err);
     m_inputLoaded = (err == wrenium::geo::Error::Ok);
     return m_inputLoaded;
 }
@@ -48,6 +61,7 @@ bool WreniumGeoBridge::loadBorderInputOnce()
 
     const wrenium::geo::Error err = wrenium::geo::loadInputGeometry(
         kWreniumGeoWorldBorders110m, sizeof(kWreniumGeoWorldBorders110m), m_borderInput);
+    warnOnError("loadBorderInputOnce: loadInputGeometry", err);
     m_borderInputLoaded = (err == wrenium::geo::Error::Ok);
     return m_borderInputLoaded;
 }
@@ -67,6 +81,7 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
     const wrenium::geo::Error pipelineErr = wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     if (pipelineErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeCoastlineSvgPath: projectRings", pipelineErr);
         return QString();
     }
 
@@ -86,6 +101,7 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     }
 
     if (emitErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeCoastlineSvgPath: emit", emitErr);
         return QString();
     }
 
@@ -117,6 +133,7 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
     const wrenium::geo::Error pipelineErr = wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     if (pipelineErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeBorderSvgPath: projectLines", pipelineErr);
         return QString();
     }
 
@@ -136,6 +153,7 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     }
 
     if (emitErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeBorderSvgPath: emit", emitErr);
         return QString();
     }
 
@@ -201,6 +219,7 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
 
     const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectRings(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
     if (pipelineErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorCoastlineSvgPath: projectRings", pipelineErr);
         return QString();
     }
 
@@ -220,6 +239,7 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
     }
 
     if (emitErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorCoastlineSvgPath: emit", emitErr);
         return QString();
     }
 
@@ -244,6 +264,7 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
 
     const wrenium::geo::Error pipelineErr = wrenium::geo::cylindrical::projectLines(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
     if (pipelineErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorBorderSvgPath: projectLines", pipelineErr);
         return QString();
     }
 
@@ -263,6 +284,7 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
     }
 
     if (emitErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeMercatorBorderSvgPath: emit", emitErr);
         return QString();
     }
 

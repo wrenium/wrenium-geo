@@ -3,6 +3,7 @@
 
 add_executable(tests
     test_main.cpp
+    test_error.cpp
     test_buffer.cpp
     test_geo_point.cpp
     test_projection.cpp
