@@ -256,6 +256,119 @@ TEST_CASE("area is unchanged by shifting the same shape across the antimeridian"
     CHECK(approxEqual(areaAtZero, areaAtAntimeridian, areaAtZero * 0.01f));
 }
 
+TEST_CASE("centroid of fewer than 3 points is {0, 0}")
+{
+    const GeoPoint points[2] = {makeGeoPoint(10.0f, 10.0f), makeGeoPoint(20.0f, 20.0f)};
+    for (std::size_t n = 0; n <= 2; ++n) {
+        const GeoPoint c = centroid(points, n);
+        CHECK(c.latRad == 0.0f);
+        CHECK(c.lonRad == 0.0f);
+    }
+}
+
+TEST_CASE("centroid of a small square matches its geometric center")
+{
+    // At small scale (~1 degree here), spherical curvature is negligible,
+    // so the centroid should closely match the square's own arithmetic
+    // mean corner (0.5, 0.5) -- the same "planar approximation at small
+    // scale" cross-check area()'s own equivalent test uses. Same widened,
+    // chained-trig budget as interpolate()'s own round-trip test above:
+    // this function chains many more approximate sin/cos/atan2 calls than
+    // a single rotate(), and that chain's own accumulated error dominates
+    // over the formula's tiny (sub-0.01-degree, at this scale) discretization
+    // error.
+    constexpr float kRoundTripToleranceRad = 3e-3f;
+    const GeoPoint square[4] = {
+        makeGeoPoint(0.0f, 0.0f),
+        makeGeoPoint(0.0f, 1.0f),
+        makeGeoPoint(1.0f, 1.0f),
+        makeGeoPoint(1.0f, 0.0f),
+    };
+    const GeoPoint c = centroid(square, 4);
+    CHECK(approxEqual(c.latRad, 0.5f * kPi / 180.0f, kRoundTripToleranceRad));
+    CHECK(approxEqual(c.lonRad, 0.5f * kPi / 180.0f, kRoundTripToleranceRad));
+}
+
+TEST_CASE("centroid of a small triangle matches an independent numerically-integrated reference")
+{
+    // Same triangle as area()'s own independent-reference test, but this
+    // reference comes from a completely different computation: a fine
+    // lat/lon grid, each cell weighted by its own true differential
+    // surface area (cos(lat) * dlat * dlon) and summed as a 3D vector,
+    // not this function's own triangle-fan/spherical-excess formula
+    // re-derived. Same widened, chained-trig tolerance as the square test
+    // above.
+    constexpr float kRoundTripToleranceRad = 3e-3f;
+    const GeoPoint triangle[3] = {
+        makeGeoPoint(10.0f, 10.0f),
+        makeGeoPoint(13.0f, 11.0f),
+        makeGeoPoint(11.0f, 14.0f),
+    };
+    constexpr float kExpectedLatRad = 11.333177f * kPi / 180.0f;
+    constexpr float kExpectedLonRad = 11.666557f * kPi / 180.0f;
+
+    const GeoPoint c = centroid(triangle, 3);
+    CHECK(approxEqual(c.latRad, kExpectedLatRad, kRoundTripToleranceRad));
+    CHECK(approxEqual(c.lonRad, kExpectedLonRad, kRoundTripToleranceRad));
+}
+
+TEST_CASE("centroid is unaffected by the ring's own winding order")
+{
+    // The triangle-fan sum's own total spherical excess flips sign with
+    // winding order, same as area()'s own line-integral sum does -- unlike
+    // area(), which only ever uses that total's magnitude, this function
+    // needs the sum's own direction, so reversing winding without also
+    // correcting for that sign flip would land on the ring's own
+    // antipodal point instead of its centroid.
+    constexpr float kToleranceRad3 = 3e-3f;
+    const GeoPoint forward[3] = {
+        makeGeoPoint(10.0f, 10.0f),
+        makeGeoPoint(13.0f, 11.0f),
+        makeGeoPoint(11.0f, 14.0f),
+    };
+    const GeoPoint reversed[3] = {
+        makeGeoPoint(11.0f, 14.0f),
+        makeGeoPoint(13.0f, 11.0f),
+        makeGeoPoint(10.0f, 10.0f),
+    };
+
+    const GeoPoint forwardCentroid = centroid(forward, 3);
+    const GeoPoint reversedCentroid = centroid(reversed, 3);
+    CHECK(approxEqual(forwardCentroid.latRad, reversedCentroid.latRad, kToleranceRad3));
+    CHECK(approxEqual(forwardCentroid.lonRad, reversedCentroid.lonRad, kToleranceRad3));
+}
+
+TEST_CASE("centroid is unchanged by shifting the same shape across the antimeridian")
+{
+    // Same square, once away from the antimeridian and once straddling
+    // it -- centroid is a property of the shape alone, so both must agree
+    // once the antimeridian-straddling one's own longitude is read back
+    // relative to the same origin. Exercises the pure-3D-vector approach
+    // directly: unlike area(), this function never takes a raw longitude
+    // difference anywhere, so it needs no wrapPi() to get this right. Same
+    // widened, chained-trig tolerance as the two tests above (in degrees
+    // here, to compare directly against wrapLongitudeDeg()'s own output).
+    constexpr float kToleranceDeg = 3e-3f * 180.0f / kPi;
+    const GeoPoint atZero[4] = {
+        makeGeoPoint(-5.0f, -5.0f),
+        makeGeoPoint(-5.0f, 5.0f),
+        makeGeoPoint(5.0f, 5.0f),
+        makeGeoPoint(5.0f, -5.0f),
+    };
+    const GeoPoint atAntimeridian[4] = {
+        makeGeoPoint(-5.0f, 175.0f),
+        makeGeoPoint(-5.0f, -175.0f),
+        makeGeoPoint(5.0f, -175.0f),
+        makeGeoPoint(5.0f, 175.0f),
+    };
+
+    const GeoPoint centroidAtZero = centroid(atZero, 4);
+    const GeoPoint centroidAtAntimeridian = centroid(atAntimeridian, 4);
+    const float shiftedLonDeg = wrapLongitudeDeg(centroidAtAntimeridian.lonRad * 180.0f / kPi - 180.0f);
+    CHECK(approxEqual(centroidAtZero.latRad * 180.0f / kPi, centroidAtAntimeridian.latRad * 180.0f / kPi, kToleranceDeg));
+    CHECK(approxEqual(centroidAtZero.lonRad * 180.0f / kPi, shiftedLonDeg, kToleranceDeg));
+}
+
 TEST_CASE("wrapLongitudeDeg wraps to (-180, 180]")
 {
     CHECK(approxEqual(wrapLongitudeDeg(0.0f), 0.0f, kToleranceRad));

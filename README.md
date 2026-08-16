@@ -58,10 +58,12 @@ anywhere in the library.
   given distance and bearing from one, a point partway between two along
   the great circle through them, or a route's own total length --
   independent of any projection or clip radius.
-- **Spherical polygon area** (`wrenium::geo::area`, `spherical.h`): the
-  area enclosed by a closed ring, in square kilometers -- accurate for
-  rings shaped like real digitized data (many points, short edges); see
-  its own doc comment for the accuracy tradeoff on a coarse, few-point ring.
+- **Spherical polygon area and centroid** (`wrenium::geo::area`/`centroid`,
+  `spherical.h`): the area enclosed by a closed ring, in square kilometers,
+  and its own area-weighted center point -- both accurate for rings shaped
+  like real digitized data (many points, short edges); see either
+  function's own doc comment for the accuracy tradeoff on a coarse,
+  few-point ring.
 - **Spherical point-in-polygon test** (`wrenium::geo::contains`,
   `contains.h`): whether a point falls inside a set of closed rings,
   independent of any projection, rotation, or clip radius -- for
