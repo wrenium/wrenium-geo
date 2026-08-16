@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <cstddef>
+
 #include "wrenium/geo/detail/azimuthal/rotation.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/projection.h"
@@ -20,11 +22,12 @@
 /// units instead of re-deriving the same spherical trig a second time.
 ///
 /// Also has interpolate() (a point partway along the great circle between
-/// two others, composing the three functions above) and a few plain
-/// degree-space helpers (wrapLongitudeDeg(), clampLatitudeDeg(),
-/// shortestAngleDeltaDeg()) for callers that keep their own location/
-/// bearing state in degrees and need it kept within range after
-/// arithmetic that can push it out.
+/// two others, composing the three functions above), length() (a
+/// polyline's total arc length, composing distanceKm() over consecutive
+/// points), and a few plain degree-space helpers (wrapLongitudeDeg(),
+/// clampLatitudeDeg(), shortestAngleDeltaDeg()) for callers that keep
+/// their own location/bearing state in degrees and need it kept within
+/// range after arithmetic that can push it out.
 
 namespace wrenium::geo {
 
@@ -84,6 +87,32 @@ inline GeoPoint destinationPoint(const GeoPoint &origin, float distanceKm, float
 inline GeoPoint interpolate(const GeoPoint &a, const GeoPoint &b, float t) // NOLINT(bugprone-easily-swappable-parameters)
 {
     return destinationPoint(a, distanceKm(a, b) * t, bearingRad(a, b));
+}
+
+/// Total arc length of a polyline through @p points, in kilometers -- the
+/// sum of each consecutive pair's distanceKm(). A flight's planned route
+/// or a ship's track, for example: length feeds directly into fuel
+/// planning, not just drawing the route.
+/// @param points The polyline's points, in order.
+/// @param count Number of points in @p points.
+/// @param closed Whether to add the closing edge from the last point back
+/// to the first (a ring's own perimeter) on top of the sum between
+/// consecutive points -- false (the default) stops at the last point (an
+/// open route/track).
+/// @return The total arc length, in kilometers. Zero if @p count < 2.
+inline float length(const GeoPoint *points, std::size_t count, bool closed = false)
+{
+    if (count < 2) {
+        return 0.0f;
+    }
+    float total = 0.0f;
+    for (std::size_t i = 0; i + 1 < count; ++i) {
+        total += distanceKm(points[i], points[i + 1]);
+    }
+    if (closed) {
+        total += distanceKm(points[count - 1], points[0]);
+    }
+    return total;
 }
 
 /// Wraps @p lonDeg to within `(-180, 180]` degrees -- for a longitude
