@@ -275,3 +275,68 @@ TEST_CASE("unproject: orthographic saturates towards the horizon for a click pas
     const float centralAngle = std::acos(std::sin(center.latRad) * std::sin(recovered.latRad) + std::cos(center.latRad) * std::cos(recovered.latRad) * std::cos(recovered.lonRad - center.lonRad));
     CHECK(centralAngle == doctest::Approx(kHalfPi).epsilon(1e-2));
 }
+
+TEST_CASE("rangeRingRadius: zero distance is the origin, regardless of projectionType")
+{
+    CHECK(rangeRingRadius(0.0f, 2.0f, ProjectionType::Equidistant) == doctest::Approx(0.0f).epsilon(1e-4));
+    CHECK(rangeRingRadius(0.0f, 2.0f, ProjectionType::Orthographic) == doctest::Approx(0.0f).epsilon(1e-4));
+}
+
+TEST_CASE("rangeRingRadius: equidistant scales linearly with distance")
+{
+    const float scale = 3.0f;
+    const float r100 = rangeRingRadius(100.0f, scale, ProjectionType::Equidistant);
+    const float r200 = rangeRingRadius(200.0f, scale, ProjectionType::Equidistant);
+    const float r400 = rangeRingRadius(400.0f, scale, ProjectionType::Equidistant);
+
+    CHECK(r200 == doctest::Approx(r100 * 2.0f).epsilon(1e-3));
+    CHECK(r400 == doctest::Approx(r100 * 4.0f).epsilon(1e-3));
+}
+
+TEST_CASE("rangeRingRadius: orthographic does not scale linearly with distance")
+{
+    // The exact bug this function exists to prevent: assuming a naive
+    // linear radius (correct for equidistant) also holds for orthographic.
+    // sin() compresses radius non-linearly as distance approaches the
+    // horizon, so equal distance steps do *not* produce equal radius steps.
+    const float scale = 1.0f;
+    const float r25 = rangeRingRadius(0.25f * kEarthRadiusKm * kHalfPi, scale, ProjectionType::Orthographic);
+    const float r50 = rangeRingRadius(0.50f * kEarthRadiusKm * kHalfPi, scale, ProjectionType::Orthographic);
+    const float r100 = rangeRingRadius(1.00f * kEarthRadiusKm * kHalfPi, scale, ProjectionType::Orthographic);
+
+    // A linear assumption would put r50 at exactly 2*r25 and r100 (the
+    // horizon) at exactly 4*r25 -- neither holds under the real sin()-based
+    // formula.
+    CHECK(r50 != doctest::Approx(r25 * 2.0f).epsilon(1e-3));
+    CHECK(r100 != doctest::Approx(r25 * 4.0f).epsilon(1e-3));
+    // Still monotonically increasing right up to the horizon, though.
+    CHECK(r50 > r25);
+    CHECK(r100 > r50);
+}
+
+TEST_CASE("rangeRingRadius agrees with projectPoint at the same distance, bearing 0")
+{
+    // rangeRingRadius() already knows the exact central angle from
+    // distanceKm, so it skips rotate()'s own atan2-based central-angle
+    // computation entirely -- projectPoint() (via rotate()) still pays
+    // that ~6e-4 rad approximation cost, so this needs a wider tolerance
+    // than an exact match, the same reasoning test_spherical.cpp's own
+    // round-trip tests use for anything chained through rotate().
+    constexpr float kRotateApproxEpsilon = 1e-2f;
+
+    const GeoPoint center{0.3f, 0.5f};
+    const float clipRadiusRad = kHalfPi;
+    const float scale = 2.0f;
+    const float distanceKm = 500.0f;
+
+    for (ProjectionType projectionType : {ProjectionType::Equidistant, ProjectionType::Orthographic}) {
+        CAPTURE(projectionType == ProjectionType::Orthographic);
+        const GeoPoint markerRaw = destinationPoint(center, distanceKm / kEarthRadiusKm, 0.0f);
+        const ProjectedPoint marker = projectPoint(markerRaw, center, clipRadiusRad, scale, projectionType);
+        REQUIRE(marker.visible);
+
+        const float ringRadius = rangeRingRadius(distanceKm, scale, projectionType);
+        CHECK(std::fabs(marker.point.x) < 1e-2f);
+        CHECK(-marker.point.y == doctest::Approx(ringRadius).epsilon(kRotateApproxEpsilon));
+    }
+}

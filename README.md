@@ -61,6 +61,11 @@ anywhere in the library.
   `contains.h`): whether a point falls inside a set of closed rings,
   independent of any projection, rotation, or clip radius -- for
   geofencing/zone-containment checks, not just drawing the rings.
+- **Range-ring radius** (`wrenium::geo::azimuthal::rangeRingRadius`,
+  `azimuthal_pipeline.h`): the on-screen radius a ring at a given
+  real-world distance from the projection center would have -- correct
+  for either radial-distance formula, unlike assuming radius scales
+  linearly with distance (only true for equidistant, not orthographic).
 - **TopoJSON converter** (`topojson2bin`, in `tools/wrenium_geo_convert`) turns
   [world-atlas](https://github.com/topojson/world-atlas) TopoJSON data into
   the library's own binary input-geometry format, output as both a raw
