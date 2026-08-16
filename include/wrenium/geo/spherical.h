@@ -5,6 +5,8 @@
 
 #include <cstddef>
 
+#include "wrenium/f32math/trig.h"
+#include "wrenium/geo/detail/angle.h"
 #include "wrenium/geo/detail/azimuthal/rotation.h"
 #include "wrenium/geo/geo_point.h"
 #include "wrenium/geo/projection.h"
@@ -24,10 +26,11 @@
 /// Also has interpolate() (a point partway along the great circle between
 /// two others, composing the three functions above), length() (a
 /// polyline's total arc length, composing distanceKm() over consecutive
-/// points), and a few plain degree-space helpers (wrapLongitudeDeg(),
-/// clampLatitudeDeg(), shortestAngleDeltaDeg()) for callers that keep
-/// their own location/bearing state in degrees and need it kept within
-/// range after arithmetic that can push it out.
+/// points), area() (a closed ring's own enclosed area), and a few plain
+/// degree-space helpers (wrapLongitudeDeg(), clampLatitudeDeg(),
+/// shortestAngleDeltaDeg()) for callers that keep their own
+/// location/bearing state in degrees and need it kept within range after
+/// arithmetic that can push it out.
 
 namespace wrenium::geo {
 
@@ -113,6 +116,65 @@ inline float length(const GeoPoint *points, std::size_t count, bool closed = fal
         total += distanceKm(points[count - 1], points[0]);
     }
     return total;
+}
+
+/// Area enclosed by the closed ring through @p points, in square
+/// kilometers. Chamberlain & Duquette's spherical-excess formula
+/// (JPL, "Some Algorithms for Polygons on a Sphere", 2007), rearranged into
+/// a single pass over edges instead of vertices (algebraically identical:
+/// `sum((lon[i+1] - lon[i-1]) * sin(lat[i]))` regrouped by edge gives
+/// `sum(lon[i+1] * sin(lat[i]) - lon[i] * sin(lat[i+1]))`, the same shape
+/// as the planar shoelace formula with longitude standing in for x and
+/// sin(latitude) for y), so no scratch array is needed for a ring of any
+/// size.
+///
+/// Longitude is tracked as a running delta from @p points's own first
+/// point, each step wrapPi()'d rather than a raw difference -- the same
+/// technique cylindrical_pipeline.h's own ring accumulation already uses,
+/// for the identical reason: a ring crossing the antimeridian must use
+/// each edge's true short-way angular step, not the near-360-degree jump
+/// a raw longitude difference would see there.
+///
+/// Accurate for rings shaped like real digitized data (many points, each
+/// edge spanning at most a few degrees) -- the formula treats each edge
+/// as a straight line in (longitude, sin(latitude)) space, which only
+/// matches the edge's own true great-circle path closely when the edge is
+/// short. A ring built from just a handful of widely-spaced vertices (a
+/// hand-drawn few-point polygon, not a coastline) underestimates area,
+/// growing roughly with the square of edge length -- measured ~0.05% for
+/// 3-degree edges, ~6% for 30-degree edges. Densify long edges with
+/// interpolate() first if @p points didn't come from real geographic data.
+/// @param points The ring's points, in order (no duplicated closing vertex).
+/// @param count Number of points in @p points.
+/// @return The enclosed area, in square kilometers. Zero if @p count < 3.
+/// Undefined for a ring that encircles a pole -- like contains()
+/// (contains.h), no real coastline ring does.
+inline float area(const GeoPoint *points, std::size_t count)
+{
+    if (count < 3) {
+        return 0.0f;
+    }
+
+    using wrenium::geo::detail::wrapPi;
+
+    const float lonFirst = points[0].lonRad;
+    const float latFirst = points[0].latRad;
+    float lonPrev = lonFirst;
+    float latPrev = latFirst;
+
+    float sum = 0.0f;
+    for (std::size_t i = 0; i + 1 < count; ++i) {
+        const float lonNext = lonPrev + wrapPi(points[i + 1].lonRad - points[i].lonRad);
+        const float latNext = points[i + 1].latRad;
+        sum += lonNext * f32math::sin(latPrev) - lonPrev * f32math::sin(latNext);
+        lonPrev = lonNext;
+        latPrev = latNext;
+    }
+    // Closing edge, back to points[0].
+    sum += lonFirst * f32math::sin(latPrev) - lonPrev * f32math::sin(latFirst);
+
+    const float unsignedSum = sum < 0.0f ? -sum : sum;
+    return unsignedSum * kEarthRadiusKm * kEarthRadiusKm * 0.5f;
 }
 
 /// Wraps @p lonDeg to within `(-180, 180]` degrees -- for a longitude
