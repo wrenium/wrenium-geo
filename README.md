@@ -51,10 +51,11 @@ anywhere in the library.
   clipping or antimeridian handling), so not a replacement for
   `projectRingsToSvg` for anything that varies at runtime -- panning,
   zooming, a live GPS center.
-- **Great-circle distance, bearing, and destination point**
-  (`wrenium::geo::distanceKm`/`bearingRad`/`destinationPoint`,
-  `spherical.h`): the distance and bearing between any two points, or the
-  point reached by travelling a given distance and bearing from one --
+- **Great-circle distance, bearing, destination point, and interpolation**
+  (`wrenium::geo::distanceKm`/`bearingRad`/`destinationPoint`/`interpolate`,
+  `spherical.h`): the distance and bearing between any two points, the
+  point reached by travelling a given distance and bearing from one, or a
+  point partway between two along the great circle through them --
   independent of any projection or clip radius.
 - **Spherical point-in-polygon test** (`wrenium::geo::contains`,
   `contains.h`): whether a point falls inside a set of closed rings,
@@ -118,6 +119,13 @@ projection formula in this library. `destinationPoint` is `distanceKm`/
 bearingRad(here, there))` recovers `there`, up to this library's own
 float/trig approximation budget (single-digit kilometers per call --
 see `spherical.h`'s own doc comments for the exact error source).
+
+`interpolate(a, b, t)` composes those same three functions into the point
+at fraction `t` of the way from `a` to `b` along the great circle through
+them -- `t=0` is `a`, `t=1` is `b`, values past either end extrapolate
+along the same circle. Useful for a route line between two points (a
+flight's great circle, a ship's planned track): sample it at a handful of
+`t` values to get waypoints to draw.
 
 ## Terminology
 

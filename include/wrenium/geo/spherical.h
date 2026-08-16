@@ -19,10 +19,12 @@
 /// representation -- this just reads those results out in more familiar
 /// units instead of re-deriving the same spherical trig a second time.
 ///
-/// Also has a few plain degree-space helpers (wrapLongitudeDeg(),
-/// clampLatitudeDeg(), shortestAngleDeltaDeg()) for callers that keep their
-/// own location/bearing state in degrees and need it kept within range
-/// after arithmetic that can push it out.
+/// Also has interpolate() (a point partway along the great circle between
+/// two others, composing the three functions above) and a few plain
+/// degree-space helpers (wrapLongitudeDeg(), clampLatitudeDeg(),
+/// shortestAngleDeltaDeg()) for callers that keep their own location/
+/// bearing state in degrees and need it kept within range after
+/// arithmetic that can push it out.
 
 namespace wrenium::geo {
 
@@ -67,6 +69,21 @@ inline GeoPoint destinationPoint(const GeoPoint &origin, float distanceKm, float
 {
     const float centralAngle = distanceKm / kEarthRadiusKm;
     return azimuthal::unrotate(GeoPoint{kHalfPi - centralAngle, bearingRad}, origin);
+}
+
+/// The point at fraction @p t of the way from @p a to @p b along the
+/// great circle through them -- t=0 is @p a, t=1 is @p b. Composes
+/// distanceKm()/bearingRad()/destinationPoint() above rather than a
+/// separate formula: the same great circle those already work with, just
+/// read out at an arbitrary point along it instead of only its endpoint.
+/// @param a The starting point (t=0).
+/// @param b The ending point (t=1).
+/// @param t Fraction of the distance from @p a to @p b -- values outside
+/// [0, 1] extrapolate past @p b or before @p a.
+/// @return The point at fraction @p t along the great circle from @p a to @p b.
+inline GeoPoint interpolate(const GeoPoint &a, const GeoPoint &b, float t) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    return destinationPoint(a, distanceKm(a, b) * t, bearingRad(a, b));
 }
 
 /// Wraps @p lonDeg to within `(-180, 180]` degrees -- for a longitude
