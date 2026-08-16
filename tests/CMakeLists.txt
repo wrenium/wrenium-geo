@@ -11,6 +11,7 @@ add_executable(tests
     test_orthographic.cpp
     test_mercator.cpp
     test_clip.cpp
+    test_contains.cpp
     test_pipeline.cpp
     test_azimuthal_svg.cpp
     test_cylindrical_svg.cpp

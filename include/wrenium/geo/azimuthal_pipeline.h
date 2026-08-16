@@ -6,6 +6,7 @@
 #include <cstddef>
 
 #include "wrenium/geo/buffer.h"
+#include "wrenium/geo/contains.h"
 #include "wrenium/geo/detail/azimuthal/clip.h"
 #include "wrenium/geo/detail/azimuthal/equidistant.h"
 #include "wrenium/geo/detail/azimuthal/orthographic.h"
@@ -189,7 +190,7 @@ inline Error projectRings(
     // did produce output) never runs this O(total input points) fallback
     // scan at all.
     if (workspace.ringSizesB.size() == 0) {
-        if (azimuthal::isCenterEnclosedByRings(inputPoints.data(), inputRingSizes, center)) {
+        if (contains(input, center)) {
             std::size_t outSize = 0;
             const Error err = azimuthal::detail::emitFullClipCircle(
                 clipRadiusRad,
