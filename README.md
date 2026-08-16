@@ -56,6 +56,10 @@ anywhere in the library.
   `spherical.h`): the distance and bearing between any two points, or the
   point reached by travelling a given distance and bearing from one --
   independent of any projection or clip radius.
+- **Spherical point-in-polygon test** (`wrenium::geo::contains`,
+  `contains.h`): whether a point falls inside a set of closed rings,
+  independent of any projection, rotation, or clip radius -- for
+  geofencing/zone-containment checks, not just drawing the rings.
 - **TopoJSON converter** (`topojson2bin`, in `tools/wrenium_geo_convert`) turns
   [world-atlas](https://github.com/topojson/world-atlas) TopoJSON data into
   the library's own binary input-geometry format, output as both a raw
