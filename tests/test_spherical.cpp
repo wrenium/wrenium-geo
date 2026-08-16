@@ -132,6 +132,60 @@ TEST_CASE("destinationPoint/distanceKm/bearingRad round-trip for an arbitrary po
     CHECK(approxEqual(bearingRad(origin, reached), travelBearing, kRoundTripToleranceRad));
 }
 
+TEST_CASE("interpolate at t=0/t=1 returns the two endpoints")
+{
+    // t=0 costs a single destinationPoint() call at zero distance (same
+    // exact case "destinationPoint at zero distance" above already
+    // checks at kToleranceRad) -- but t=1 chains distanceKm()+bearingRad()
+    // into that same destinationPoint() call, the same three-hop
+    // composition "destinationPoint/distanceKm/bearingRad round-trip"
+    // above needs its own wider tolerance for, and for the same reason.
+    constexpr float kRoundTripToleranceRad = 3e-3f;
+
+    const GeoPoint a = makeGeoPoint(28.6f, 17.2f);
+    const GeoPoint b = makeGeoPoint(11.5f, -5.7f);
+
+    CHECK(approxEqual(interpolate(a, b, 0.0f).latRad, a.latRad, kToleranceRad));
+    CHECK(approxEqual(interpolate(a, b, 0.0f).lonRad, a.lonRad, kToleranceRad));
+    CHECK(approxEqual(interpolate(a, b, 1.0f).latRad, b.latRad, kRoundTripToleranceRad));
+    CHECK(approxEqual(interpolate(a, b, 1.0f).lonRad, b.lonRad, kRoundTripToleranceRad));
+}
+
+TEST_CASE("interpolate at t=0.5 sits at the great-circle midpoint")
+{
+    // The midpoint is equidistant from both endpoints, and its two
+    // half-distances sum back to the full a-to-b distance -- an
+    // independent property check, not just "close to some expected
+    // coordinate", so it can't accidentally pass from a formula bug that
+    // happens to also be self-consistent. Same wider round-trip tolerance
+    // as the t=1 case above, for the same three-hop-composition reason.
+    constexpr float kRoundTripToleranceKm = 15.0f;
+
+    const GeoPoint a = makeGeoPoint(28.6f, 17.2f);
+    const GeoPoint b = makeGeoPoint(-40.0f, 120.0f);
+    const GeoPoint mid = interpolate(a, b, 0.5f);
+
+    const float distAToMid = distanceKm(a, mid);
+    const float distMidToB = distanceKm(mid, b);
+    const float distAToB = distanceKm(a, b);
+
+    CHECK(approxEqual(distAToMid, distMidToB, kToleranceKm));
+    CHECK(approxEqual(distAToMid + distMidToB, distAToB, kRoundTripToleranceKm));
+}
+
+TEST_CASE("interpolate extrapolates past b for t>1")
+{
+    // t=2 should sit exactly one more a-to-b distance past b, along the
+    // same great circle (same bearing from b onward as a-to-b's own).
+    const GeoPoint a = makeGeoPoint(10.0f, 0.0f);
+    const GeoPoint b = makeGeoPoint(30.0f, 10.0f);
+    const GeoPoint extrapolated = interpolate(a, b, 2.0f);
+
+    const float distAToB = distanceKm(a, b);
+    CHECK(approxEqual(distanceKm(b, extrapolated), distAToB, kToleranceKm));
+    CHECK(approxEqual(distanceKm(a, extrapolated), distAToB * 2.0f, kToleranceKm));
+}
+
 TEST_CASE("wrapLongitudeDeg wraps to (-180, 180]")
 {
     CHECK(approxEqual(wrapLongitudeDeg(0.0f), 0.0f, kToleranceRad));
