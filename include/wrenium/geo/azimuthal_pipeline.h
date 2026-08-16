@@ -471,4 +471,33 @@ inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scal
         : detail::unproject<azimuthal::unprojectEquidistant>(point, center, scale);
 }
 
+/// The on-screen radius a ring drawn at real-world distance @p distanceKm
+/// from the projection center would have -- correct for either radial-
+/// distance formula, unlike assuming radius scales linearly with distance
+/// (only true for equidistant; orthographic's own radius is proportional
+/// to sin(centralAngle), not centralAngle itself, so the same assumption
+/// reused there silently draws rings at the wrong spacing).
+///
+/// Reuses #projectEquidistant / #projectOrthographic directly (a
+/// synthetic rotated point at bearing 0, so only the radius half of their
+/// own north-up convention survives) rather than a separate formula, so
+/// this can never drift out of sync with what projectRings()/
+/// projectLines()/projectPoint() actually draw.
+/// @param distanceKm Real-world distance from the projection center.
+/// @param scale Output units per kilometer -- same convention as
+/// #projectRings()'s identical parameter.
+/// @param projectionType Must match whatever #projectRings() /
+/// #projectLines() / #projectPoint() this same view uses, or the ring
+/// won't align with the projected data.
+/// @return The on-screen radius for a ring at that distance.
+inline float rangeRingRadius(float distanceKm, float scale, ProjectionType projectionType) // NOLINT(bugprone-easily-swappable-parameters)
+{
+    const float centralAngle = distanceKm / kEarthRadiusKm;
+    const GeoPoint rotated{kHalfPi - centralAngle, 0.0f}; // bearing 0 -- doesn't affect the radius either formula returns
+    const Point projected = projectionType == ProjectionType::Orthographic
+        ? azimuthal::projectOrthographic(rotated, scale)
+        : azimuthal::projectEquidistant(rotated, scale);
+    return projected.y < 0.0f ? -projected.y : projected.y;
+}
+
 } // namespace wrenium::geo::azimuthal
