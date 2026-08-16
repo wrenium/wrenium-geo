@@ -215,3 +215,44 @@ TEST_CASE("shortestAngleDeltaDeg finds the shorter way around")
     CHECK(approxEqual(shortestAngleDeltaDeg(0.0f, 180.0f), 180.0f, kToleranceRad));
     CHECK(approxEqual(shortestAngleDeltaDeg(45.0f, 45.0f), 0.0f, kToleranceRad));
 }
+
+TEST_CASE("length of fewer than 2 points is zero")
+{
+    const GeoPoint one[1] = {makeGeoPoint(28.6f, 17.2f)};
+    CHECK(length(one, 0) == 0.0f);
+    CHECK(length(one, 1) == 0.0f);
+}
+
+TEST_CASE("length of two points matches distanceKm directly")
+{
+    const GeoPoint points[2] = {makeGeoPoint(28.6f, 17.2f), makeGeoPoint(11.5f, -5.7f)};
+    CHECK(approxEqual(length(points, 2), distanceKm(points[0], points[1]), kToleranceKm));
+}
+
+TEST_CASE("length of an open polyline sums each consecutive hop")
+{
+    const GeoPoint points[3] = {
+        makeGeoPoint(28.6f, 17.2f),
+        makeGeoPoint(11.5f, -5.7f),
+        makeGeoPoint(-20.0f, 40.0f),
+    };
+    const float expected = distanceKm(points[0], points[1]) + distanceKm(points[1], points[2]);
+    CHECK(approxEqual(length(points, 3), expected, kToleranceKm));
+    // Doesn't include a closing edge back to points[0] unless asked.
+    CHECK_FALSE(approxEqual(length(points, 3), expected + distanceKm(points[2], points[0]), kToleranceKm));
+}
+
+TEST_CASE("length with closed=true adds the closing edge back to the first point")
+{
+    const GeoPoint points[4] = {
+        makeGeoPoint(10.0f, 10.0f),
+        makeGeoPoint(10.0f, 20.0f),
+        makeGeoPoint(20.0f, 20.0f),
+        makeGeoPoint(20.0f, 10.0f),
+    };
+    const float openLength = length(points, 4, false);
+    const float closedLength = length(points, 4, true);
+    const float closingEdge = distanceKm(points[3], points[0]);
+
+    CHECK(approxEqual(closedLength, openLength + closingEdge, kToleranceKm));
+}

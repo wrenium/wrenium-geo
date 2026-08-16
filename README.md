@@ -51,11 +51,12 @@ anywhere in the library.
   clipping or antimeridian handling), so not a replacement for
   `projectRingsToSvg` for anything that varies at runtime -- panning,
   zooming, a live GPS center.
-- **Great-circle distance, bearing, destination point, and interpolation**
-  (`wrenium::geo::distanceKm`/`bearingRad`/`destinationPoint`/`interpolate`,
-  `spherical.h`): the distance and bearing between any two points, the
-  point reached by travelling a given distance and bearing from one, or a
-  point partway between two along the great circle through them --
+- **Great-circle distance, bearing, destination point, interpolation, and
+  polyline length** (`wrenium::geo::distanceKm`/`bearingRad`/
+  `destinationPoint`/`interpolate`/`length`, `spherical.h`): the distance
+  and bearing between any two points, the point reached by travelling a
+  given distance and bearing from one, a point partway between two along
+  the great circle through them, or a route's own total length --
   independent of any projection or clip radius.
 - **Spherical point-in-polygon test** (`wrenium::geo::contains`,
   `contains.h`): whether a point falls inside a set of closed rings,
