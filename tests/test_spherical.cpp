@@ -186,6 +186,76 @@ TEST_CASE("interpolate extrapolates past b for t>1")
     CHECK(approxEqual(distanceKm(a, extrapolated), distAToB * 2.0f, kToleranceKm));
 }
 
+TEST_CASE("area of fewer than 3 points is zero")
+{
+    const GeoPoint points[2] = {makeGeoPoint(10.0f, 10.0f), makeGeoPoint(20.0f, 20.0f)};
+    CHECK(area(points, 0) == 0.0f);
+    CHECK(area(points, 1) == 0.0f);
+    CHECK(area(points, 2) == 0.0f);
+}
+
+TEST_CASE("area of a small square matches the planar approximation")
+{
+    // At small scale (~1 degree here), spherical curvature is negligible,
+    // so the enclosed area should closely match a flat-earth rectangle:
+    // width * height, both converted from degrees to kilometers.
+    const GeoPoint square[4] = {
+        makeGeoPoint(0.0f, 0.0f),
+        makeGeoPoint(0.0f, 1.0f),
+        makeGeoPoint(1.0f, 1.0f),
+        makeGeoPoint(1.0f, 0.0f),
+    };
+    const float degToKm = kPi / 180.0f * kEarthRadiusKm;
+    const float planarApprox = degToKm * degToKm;
+
+    CHECK(approxEqual(area(square, 4), planarApprox, planarApprox * 0.01f));
+}
+
+TEST_CASE("area of a small triangle matches an independent spherical-excess reference")
+{
+    // Expected value computed independently in Python via 3D unit vectors
+    // and the spherical law of cosines (interior angle at each vertex =
+    // angle between the two tangent-plane directions toward its
+    // neighbors; area = R^2 * (sum of interior angles - pi)) -- a
+    // completely different computational path from this function's own
+    // line-integral formula, not just the same formula re-derived.
+    const GeoPoint triangle[3] = {
+        makeGeoPoint(10.0f, 10.0f),
+        makeGeoPoint(13.0f, 11.0f),
+        makeGeoPoint(11.0f, 14.0f),
+    };
+    constexpr float kExpectedAreaKm2 = 66698.99f;
+    // Small (~3 degree) edges keep this function's own edge-length-
+    // dependent discretization error negligible (see its own doc comment)
+    // -- 1% comfortably covers that plus ordinary trig approximation.
+    CHECK(approxEqual(area(triangle, 3), kExpectedAreaKm2, kExpectedAreaKm2 * 0.01f));
+}
+
+TEST_CASE("area is unchanged by shifting the same shape across the antimeridian")
+{
+    // Same square, once away from the antimeridian and once straddling
+    // it -- area is a property of the shape alone, so both must agree.
+    // Exercises the wrapPi()'d longitude accumulation directly: without
+    // it, the antimeridian-straddling ring's raw longitude differences
+    // would see a spurious ~360 degree jump at the crossing edge.
+    const GeoPoint atZero[4] = {
+        makeGeoPoint(-5.0f, -5.0f),
+        makeGeoPoint(-5.0f, 5.0f),
+        makeGeoPoint(5.0f, 5.0f),
+        makeGeoPoint(5.0f, -5.0f),
+    };
+    const GeoPoint atAntimeridian[4] = {
+        makeGeoPoint(-5.0f, 175.0f),
+        makeGeoPoint(-5.0f, -175.0f),
+        makeGeoPoint(5.0f, -175.0f),
+        makeGeoPoint(5.0f, 175.0f),
+    };
+
+    const float areaAtZero = area(atZero, 4);
+    const float areaAtAntimeridian = area(atAntimeridian, 4);
+    CHECK(approxEqual(areaAtZero, areaAtAntimeridian, areaAtZero * 0.01f));
+}
+
 TEST_CASE("wrapLongitudeDeg wraps to (-180, 180]")
 {
     CHECK(approxEqual(wrapLongitudeDeg(0.0f), 0.0f, kToleranceRad));
