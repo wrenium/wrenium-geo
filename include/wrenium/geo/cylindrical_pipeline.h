@@ -201,9 +201,9 @@ inline BoundaryStep stepAcrossBoundary(float x0, float deltaRad)
 // order across every call site in this codebase (see @param above);
 // reordering one alone would be its own hazard.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
-    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    Workspace<MaxPoints, MaxRings, MaxRingPoints> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
     float scale,
@@ -601,9 +601,9 @@ inline Error projectRings(
 /// doesn't fit in @p workspace.
 // See projectRings's identical parameter pair and NOLINT rationale above.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
-    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    Workspace<MaxPoints, MaxRings, MaxRingPoints> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
     float scale,

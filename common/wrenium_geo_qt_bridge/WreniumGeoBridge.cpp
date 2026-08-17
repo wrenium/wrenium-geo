@@ -58,7 +58,7 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
 
     wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        err = wrenium::geo::azimuthal::projectRingsToSvg(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
+        err = wrenium::geo::azimuthal::projectRingsToSvg(m_workspace, m_svgPath, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     } else {
         err = wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, projectionType);
         if (err == wrenium::geo::Error::Ok) {
@@ -68,7 +68,7 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
         }
         if (err == wrenium::geo::Error::Ok) {
             err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
-                m_binaryPath.data(), m_binaryPath.size(), m_workspace.svgPath);
+                m_binaryPath.data(), m_binaryPath.size(), m_svgPath);
         }
     }
 
@@ -77,7 +77,7 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
         return QString();
     }
 
-    return QString::fromLatin1(m_workspace.svgPath.data(), static_cast<int>(m_workspace.svgPath.size()));
+    return QString::fromLatin1(m_svgPath.data(), static_cast<int>(m_svgPath.size()));
 }
 
 double WreniumGeoBridge::earthRadiusKm() const
@@ -108,7 +108,7 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
 
     wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        err = wrenium::geo::azimuthal::projectLinesToSvg(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
+        err = wrenium::geo::azimuthal::projectLinesToSvg(m_borderWorkspace, m_borderSvgPath, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
     } else {
         err = wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, projectionType);
         if (err == wrenium::geo::Error::Ok) {
@@ -118,7 +118,7 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
         }
         if (err == wrenium::geo::Error::Ok) {
             err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
-                m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderWorkspace.svgPath);
+                m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderSvgPath);
         }
     }
 
@@ -127,7 +127,7 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
         return QString();
     }
 
-    return QString::fromLatin1(m_borderWorkspace.svgPath.data(), static_cast<int>(m_borderWorkspace.svgPath.size()));
+    return QString::fromLatin1(m_borderSvgPath.data(), static_cast<int>(m_borderSvgPath.size()));
 }
 
 QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useOrthographic) const
@@ -191,7 +191,7 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
 
     wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        err = wrenium::geo::cylindrical::projectRingsToSvg(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
+        err = wrenium::geo::cylindrical::projectRingsToSvg(m_workspace, m_svgPath, m_input, center, scale, clipLatRad, clipLonRad);
     } else {
         err = wrenium::geo::cylindrical::projectRings(m_workspace, m_input, center, scale, clipLatRad, clipLonRad);
         if (err == wrenium::geo::Error::Ok) {
@@ -201,7 +201,7 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
         }
         if (err == wrenium::geo::Error::Ok) {
             err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
-                m_binaryPath.data(), m_binaryPath.size(), m_workspace.svgPath);
+                m_binaryPath.data(), m_binaryPath.size(), m_svgPath);
         }
     }
 
@@ -210,7 +210,7 @@ QString WreniumGeoBridge::computeMercatorCoastlineSvgPath(double centerLatDeg, d
         return QString();
     }
 
-    return QString::fromLatin1(m_workspace.svgPath.data(), static_cast<int>(m_workspace.svgPath.size()));
+    return QString::fromLatin1(m_svgPath.data(), static_cast<int>(m_svgPath.size()));
 }
 
 QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter)
@@ -233,7 +233,7 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
 
     wrenium::geo::Error err;
     if (!useBinaryEmitter) {
-        err = wrenium::geo::cylindrical::projectLinesToSvg(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
+        err = wrenium::geo::cylindrical::projectLinesToSvg(m_borderWorkspace, m_borderSvgPath, m_borderInput, center, scale, clipLatRad, clipLonRad);
     } else {
         err = wrenium::geo::cylindrical::projectLines(m_borderWorkspace, m_borderInput, center, scale, clipLatRad, clipLonRad);
         if (err == wrenium::geo::Error::Ok) {
@@ -243,7 +243,7 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
         }
         if (err == wrenium::geo::Error::Ok) {
             err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
-                m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderWorkspace.svgPath);
+                m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderSvgPath);
         }
     }
 
@@ -252,7 +252,7 @@ QString WreniumGeoBridge::computeMercatorBorderSvgPath(double centerLatDeg, doub
         return QString();
     }
 
-    return QString::fromLatin1(m_borderWorkspace.svgPath.data(), static_cast<int>(m_borderWorkspace.svgPath.size()));
+    return QString::fromLatin1(m_borderSvgPath.data(), static_cast<int>(m_borderSvgPath.size()));
 }
 
 QVariantList WreniumGeoBridge::unprojectMercatorPoint(double pointX, double pointY, double centerLatDeg, double centerLonDeg, double halfWidthKm, double viewportWidthPx) const
