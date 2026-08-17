@@ -31,6 +31,13 @@ enum class Error
                           ///< or a close with no matching open. Fix: pass a
                           ///< stream produced by this library's own encoder,
                           ///< unmodified.
+    InvalidParameter,     ///< A runtime argument was outside the range an
+                          ///< operation is defined for -- checked
+                          ///< explicitly rather than left to produce a
+                          ///< degenerate result or loop indefinitely (a
+                          ///< non-positive step size, for example). Fix:
+                          ///< pass a value in the range that operation's
+                          ///< own doc comment documents.
 };
 
 /// A short, human-readable description of @p error, for logs/diagnostics --
@@ -53,6 +60,8 @@ inline const char *errorToString(Error error)
         return "TruncatedData: a wire stream ended before its header or a structure the header describes was fully read";
     case Error::MalformedStream:
         return "MalformedStream: a wire stream's content violates the format's own structure";
+    case Error::InvalidParameter:
+        return "InvalidParameter: a runtime argument was outside the range that operation is defined for";
     }
     return "unrecognized Error value";
 }

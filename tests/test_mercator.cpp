@@ -774,3 +774,119 @@ TEST_CASE("Mercator: projectLines culls an out-of-window run and keeps a partial
         CHECK(workspace.projectedRingSizes()[0] == 2);
     }
 }
+
+TEST_CASE("generateGraticule rejects a step outside (0, 180)")
+{
+    static InputGeometry<256, 64> out;
+    CHECK(generateGraticule(out, 0.0f) == Error::InvalidParameter);
+    CHECK(generateGraticule(out, -10.0f) == Error::InvalidParameter);
+    CHECK(generateGraticule(out, 180.0f) == Error::InvalidParameter);
+    CHECK(generateGraticule(out, 200.0f) == Error::InvalidParameter);
+}
+
+TEST_CASE("generateGraticule produces the expected line count and sizes for a simple step")
+{
+    // 90-degree step: meridians at -180, -90, 0, 90 (4, not including the
+    // duplicate 180/-180 line); one parallel, at 0 degrees (180 / 90 - 1
+    // == 1, skipping both poles).
+    static InputGeometry<256, 64> out;
+    const Error err = generateGraticule(out, 90.0f);
+    REQUIRE(err == Error::Ok);
+    REQUIRE(out.ringSizes.size() == 5);
+    CHECK(out.ringSizes[0] == 2); // meridian
+    CHECK(out.ringSizes[1] == 2);
+    CHECK(out.ringSizes[2] == 2);
+    CHECK(out.ringSizes[3] == 2);
+    CHECK(out.ringSizes[4] == 37); // parallel: 36 segments, 37 points
+}
+
+TEST_CASE("generateGraticule clears out's own prior content before regenerating")
+{
+    static InputGeometry<256, 64> out;
+    const GeoPoint stale[] = {makeGeoPoint(1.0f, 1.0f), makeGeoPoint(2.0f, 2.0f)};
+    pushRing(out, stale);
+    REQUIRE(out.ringSizes.size() == 1);
+
+    const Error err = generateGraticule(out, 90.0f);
+    REQUIRE(err == Error::Ok);
+    CHECK(out.ringSizes.size() == 5); // the stale ring is gone, not appended to
+}
+
+TEST_CASE("generateGraticule reports CapacityExceeded instead of silently truncating")
+{
+    static InputGeometry<4, 1> tooSmall;
+    CHECK(generateGraticule(tooSmall, 90.0f) == Error::CapacityExceeded);
+}
+
+TEST_CASE("generateGraticule's meridians project to straight vertical lines under Mercator")
+{
+    static InputGeometry<256, 64> graticule;
+    REQUIRE(generateGraticule(graticule, 90.0f) == Error::Ok);
+
+    static Workspace<256, 64> workspace;
+    const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
+    const Error err = projectLines(workspace, graticule, center, 1.0f);
+    REQUIRE(err == Error::Ok);
+    // 4 meridian pieces, plus 2 more from the one parallel's own single
+    // antimeridian crossing (see the parallel-focused test below).
+    REQUIRE(workspace.projectedRingSizes().size() == 6);
+
+    // Each of the first 4 pieces is a meridian (2 points) -- both must
+    // share the same projected x, the defining property of a straight
+    // vertical line.
+    const Point *pts = workspace.projectedPoints();
+    std::size_t offset = 0;
+    for (std::size_t r = 0; r < 4; ++r) {
+        const std::size_t size = workspace.projectedRingSizes()[r];
+        REQUIRE(size == 2);
+        CHECK(approxEqual(pts[offset].x, pts[offset + 1].x, 0.5f));
+        offset += size;
+    }
+}
+
+TEST_CASE("generateGraticule's parallel projects to a straight horizontal line spanning the full map width")
+{
+    static InputGeometry<256, 64> graticule;
+    REQUIRE(generateGraticule(graticule, 90.0f) == Error::Ok);
+
+    static Workspace<256, 64> workspace;
+    const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
+    const Error err = projectLines(workspace, graticule, center, 1.0f);
+    REQUIRE(err == Error::Ok);
+
+    // The one parallel spans the full globe, so it crosses projectLines()'s
+    // own map boundary exactly once for this center (generateGraticule()'s
+    // own doc comment): 4 meridian pieces plus 2 real pieces from that
+    // one crossing, the same way any other antimeridian-crossing line
+    // already splits.
+    REQUIRE(workspace.projectedRingSizes().size() == 6);
+
+    std::size_t offset = 0;
+    for (std::size_t r = 0; r < 4; ++r) {
+        offset += workspace.projectedRingSizes()[r];
+    }
+    const std::size_t firstPieceSize = workspace.projectedRingSizes()[4];
+    const std::size_t secondPieceSize = workspace.projectedRingSizes()[5];
+    REQUIRE(firstPieceSize + secondPieceSize == 39); // 37 real points + 2 inserted boundary points
+
+    const Point *pts = workspace.projectedPoints();
+    const float halfWorldWidth = kPi * kEarthRadiusKm;
+    const std::size_t totalParallelPoints = firstPieceSize + secondPieceSize;
+    float minX = pts[offset].x;
+    float maxX = pts[offset].x;
+    for (std::size_t i = 0; i < totalParallelPoints; ++i) {
+        // Every point of both pieces together -- a straight horizontal
+        // line's defining property, regardless of which piece it landed
+        // in.
+        CHECK(approxEqual(pts[offset + i].y, pts[offset].y, 0.5f));
+        if (pts[offset + i].x < minX) {
+            minX = pts[offset + i].x;
+        } else if (pts[offset + i].x > maxX) {
+            maxX = pts[offset + i].x;
+        }
+    }
+    // Together, both pieces reach both edges of the map -- no missing gap
+    // at the crossing.
+    CHECK(approxEqual(minX, -halfWorldWidth, 1.0f));
+    CHECK(approxEqual(maxX, halfWorldWidth, 1.0f));
+}
