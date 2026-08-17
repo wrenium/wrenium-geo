@@ -207,6 +207,21 @@ TEST_CASE("projectPoint: ProjectionType::Orthographic selects a different radial
     CHECK(orthographicResult.point.x != doctest::Approx(equidistantResult.point.x).epsilon(1e-4));
 }
 
+TEST_CASE("projectPoint: ProjectionType::Gnomonic selects a different radial-distance formula than ProjectionType::Equidistant")
+{
+    const GeoPoint center{0.3f, 0.5f};
+    const float clipRadiusRad = 20.0f * kPi / 180.0f;
+    const float scale = 2.0f;
+    const GeoPoint markerRaw = destinationPoint(center, 10.0f * kPi / 180.0f, 0.7f);
+
+    const ProjectedPoint equidistantResult = projectPoint(markerRaw, center, clipRadiusRad, scale, ProjectionType::Equidistant);
+    const ProjectedPoint gnomonicResult = projectPoint(markerRaw, center, clipRadiusRad, scale, ProjectionType::Gnomonic);
+
+    REQUIRE(equidistantResult.visible);
+    REQUIRE(gnomonicResult.visible);
+    CHECK(gnomonicResult.point.x != doctest::Approx(equidistantResult.point.x).epsilon(1e-4));
+}
+
 TEST_CASE("unproject: exact inverse of projectEquidistant")
 {
     const GeoPoint centers[] = {
@@ -276,10 +291,24 @@ TEST_CASE("unproject: orthographic saturates towards the horizon for a click pas
     CHECK(centralAngle == doctest::Approx(kHalfPi).epsilon(1e-2));
 }
 
+TEST_CASE("unproject: exact inverse of projectGnomonic")
+{
+    const GeoPoint center{0.3f, -0.8f};
+    const float scale = 1.5f;
+    const GeoPoint raw = destinationPoint(center, 30.0f * kPi / 180.0f, 1.1f);
+
+    const Point projected = projectGnomonic(rotate(raw, center), scale);
+    const GeoPoint recovered = unproject(projected, center, scale, ProjectionType::Gnomonic);
+
+    CHECK(recovered.latRad == doctest::Approx(raw.latRad).epsilon(1e-2));
+    CHECK(recovered.lonRad == doctest::Approx(raw.lonRad).epsilon(1e-2));
+}
+
 TEST_CASE("rangeRingRadius: zero distance is the origin, regardless of projectionType")
 {
     CHECK(rangeRingRadius(0.0f, 2.0f, ProjectionType::Equidistant) == doctest::Approx(0.0f).epsilon(1e-4));
     CHECK(rangeRingRadius(0.0f, 2.0f, ProjectionType::Orthographic) == doctest::Approx(0.0f).epsilon(1e-4));
+    CHECK(rangeRingRadius(0.0f, 2.0f, ProjectionType::Gnomonic) == doctest::Approx(0.0f).epsilon(1e-4));
 }
 
 TEST_CASE("rangeRingRadius: equidistant scales linearly with distance")
@@ -314,6 +343,23 @@ TEST_CASE("rangeRingRadius: orthographic does not scale linearly with distance")
     CHECK(r100 > r50);
 }
 
+TEST_CASE("rangeRingRadius: gnomonic does not scale linearly with distance")
+{
+    // Same reasoning as orthographic's identical test above: a naive linear
+    // assumption is wrong here too, but in the opposite direction -- tan()
+    // grows *faster* than linear as distance approaches the (unreachable in
+    // this test) horizon, rather than orthographic's sin()-driven flattening.
+    const float scale = 1.0f;
+    const float r25 = rangeRingRadius(0.25f * kEarthRadiusKm * kHalfPi, scale, ProjectionType::Gnomonic);
+    const float r50 = rangeRingRadius(0.50f * kEarthRadiusKm * kHalfPi, scale, ProjectionType::Gnomonic);
+    const float r75 = rangeRingRadius(0.75f * kEarthRadiusKm * kHalfPi, scale, ProjectionType::Gnomonic);
+
+    CHECK(r50 != doctest::Approx(r25 * 2.0f).epsilon(1e-3));
+    CHECK(r75 != doctest::Approx(r25 * 3.0f).epsilon(1e-3));
+    CHECK(r50 > r25);
+    CHECK(r75 > r50);
+}
+
 TEST_CASE("rangeRingRadius agrees with projectPoint at the same distance, bearing 0")
 {
     // rangeRingRadius() already knows the exact central angle from
@@ -329,8 +375,8 @@ TEST_CASE("rangeRingRadius agrees with projectPoint at the same distance, bearin
     const float scale = 2.0f;
     const float distanceKm = 500.0f;
 
-    for (ProjectionType projectionType : {ProjectionType::Equidistant, ProjectionType::Orthographic}) {
-        CAPTURE(projectionType == ProjectionType::Orthographic);
+    for (ProjectionType projectionType : {ProjectionType::Equidistant, ProjectionType::Orthographic, ProjectionType::Gnomonic}) {
+        CAPTURE(static_cast<int>(projectionType));
         const GeoPoint markerRaw = destinationPoint(center, distanceKm / kEarthRadiusKm, 0.0f);
         const ProjectedPoint marker = projectPoint(markerRaw, center, clipRadiusRad, scale, projectionType);
         REQUIRE(marker.visible);

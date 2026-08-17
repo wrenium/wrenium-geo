@@ -6,27 +6,31 @@
 [API documentation](https://wrenium.github.io/wrenium-geo/)
 
 A C++17 header-only geometry library that projects geographic coastline and
-border data onto a 2D plane. Three projections are supported: azimuthal
-equidistant, azimuthal orthographic, and whole-world Web Mercator. Output
-is either an SVG path string or a compact binary path stream. Built for
-constrained environments: zero heap allocation, and no exceptions or RTTI
-anywhere in the library.
+border data onto a 2D plane. Four projections are supported: azimuthal
+equidistant, azimuthal orthographic, azimuthal gnomonic, and whole-world Web
+Mercator. Output is either an SVG path string or a compact binary path
+stream. Built for constrained environments: zero heap allocation, and no
+exceptions or RTTI anywhere in the library.
 
 ![Example output from examples/azimuthmap](docs/azimuthmap-screenshot.png)
 
 ## Features
 
-- **Azimuthal equidistant/orthographic**, centered on any point on Earth,
-  via a rotate -> clip -> project pipeline
+- **Azimuthal equidistant/orthographic/gnomonic**, centered on any point on
+  Earth, via a rotate -> clip -> project pipeline
   (`wrenium::geo::azimuthal::projectRings`/`projectLines`/`projectPoint`,
   `azimuthal_pipeline.h`): rotates the sphere so that center point becomes
   the pole, clips coastline/border data down to a configurable radius
   around it, then projects what's left with a closed-form radial-distance
   formula. Selected via a `ProjectionType` argument (no default -- always passed
   explicitly): **equidistant** (true distance and bearing from the
-  center point are preserved exactly) and **orthographic** (renders as if
+  center point are preserved exactly), **orthographic** (renders as if
   viewed from infinitely far away -- the disk edge is the horizon; only
-  meaningful up to a 90 degree clip radius).
+  meaningful up to a 90 degree clip radius), and **gnomonic** (every great
+  circle is a straight line, so any straight line on the map is the
+  shortest path between the two points it joins; radius grows without
+  bound approaching a 90 degree clip radius, so only meaningful strictly
+  inside it).
 - **Whole-world Web Mercator** (`wrenium::geo::cylindrical::projectRings`/
   `projectLines`, `cylindrical_pipeline.h`): no exact per-point clip, just
   an optional coarse visibility cull, with pole-latitude clamping and
@@ -76,8 +80,9 @@ anywhere in the library.
 - **Range-ring radius** (`wrenium::geo::azimuthal::rangeRingRadius`,
   `azimuthal_pipeline.h`): the on-screen radius a ring at a given
   real-world distance from the projection center would have -- correct
-  for either radial-distance formula, unlike assuming radius scales
-  linearly with distance (only true for equidistant, not orthographic).
+  for any of the radial-distance formulas, unlike assuming radius scales
+  linearly with distance (only true for equidistant, not orthographic or
+  gnomonic).
 - **TopoJSON converter** (`topojson2bin`, in `tools/wrenium_geo_convert`) turns
   [world-atlas](https://github.com/topojson/world-atlas) TopoJSON data into
   the library's own binary input-geometry format, output as both a raw
@@ -101,6 +106,13 @@ viewed from infinitely far away in space -- the disk edge is the horizon,
 and shapes noticeably foreshorten as they approach it. Only meaningful up
 to a 90 degree clip radius (past that, the far hemisphere would fold back
 onto the near one).
+
+**Azimuthal gnomonic** also centers on any point, and maps every great
+circle on the sphere to a straight line on the plane -- any straight line
+drawn on the output is the shortest path between the two points it joins,
+which the equidistant/orthographic pair don't guarantee off-center. Radius
+grows without bound approaching a 90 degree clip radius, so it's only
+meaningful strictly inside it, tighter than orthographic's own limit.
 
 **Web Mercator** is the familiar rectangular world map used by most web
 mapping services -- straight lines of constant compass bearing are
@@ -316,10 +328,11 @@ void recomputeMap(double centerLatDeg, double centerLonDeg, double clipRadiusKm,
 // svgPath now holds "M x,y L x,y ... Z" path data, ready to draw.
 ```
 
-To use the orthographic projection instead, pass `ProjectionType::Orthographic`
-to `azimuthal::projectRings`/`projectLines`/`projectPoint` (each call
-site picks independently, but must agree across a single map or the
-layers won't line up):
+To use the orthographic or gnomonic projection instead, pass
+`ProjectionType::Orthographic`/`ProjectionType::Gnomonic` to
+`azimuthal::projectRings`/`projectLines`/`projectPoint` (each call site
+picks independently, but must agree across a single map or the layers
+won't line up):
 
 ```cpp
 wrenium::geo::azimuthal::projectRings(
