@@ -53,17 +53,19 @@ TEST_CASE("cylindrical::projectRingsToSvg matches projectRings + emitSvgPath cal
     const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
 
     Workspace<16, 4> manual;
+    Buffer<char, 256> manualSvgPath;
     const Error manualPipelineErr = projectRings(manual, input, center, 1.0f);
     REQUIRE(manualPipelineErr == Error::Ok);
-    const Error manualEmitErr = emitSvgPath(manual.projectedPoints(), manual.projectedRingSizes().data(), manual.projectedRingSizes().size(), manual.svgPath);
+    const Error manualEmitErr = emitSvgPath(manual.projectedPoints(), manual.projectedRingSizes().data(), manual.projectedRingSizes().size(), manualSvgPath);
     REQUIRE(manualEmitErr == Error::Ok);
 
     Workspace<16, 4> oneCall;
-    const Error err = projectRingsToSvg(oneCall, input, center, 1.0f);
+    Buffer<char, 256> oneCallSvgPath;
+    const Error err = projectRingsToSvg(oneCall, oneCallSvgPath, input, center, 1.0f);
     REQUIRE(err == Error::Ok);
 
-    REQUIRE(oneCall.svgPath.size() == manual.svgPath.size());
-    CHECK(std::memcmp(oneCall.svgPath.data(), manual.svgPath.data(), manual.svgPath.size()) == 0);
+    REQUIRE(oneCallSvgPath.size() == manualSvgPath.size());
+    CHECK(std::memcmp(oneCallSvgPath.data(), manualSvgPath.data(), manualSvgPath.size()) == 0);
 }
 
 TEST_CASE("cylindrical::projectLinesToSvg matches projectLines + emitSvgLinePath called separately")
@@ -72,17 +74,19 @@ TEST_CASE("cylindrical::projectLinesToSvg matches projectLines + emitSvgLinePath
     const GeoPoint center = makeGeoPoint(0.0f, 0.0f);
 
     Workspace<16, 4> manual;
+    Buffer<char, 256> manualSvgPath;
     const Error manualPipelineErr = projectLines(manual, input, center, 1.0f);
     REQUIRE(manualPipelineErr == Error::Ok);
-    const Error manualEmitErr = emitSvgLinePath(manual.projectedPoints(), manual.projectedRingSizes().data(), manual.projectedRingSizes().size(), manual.svgPath);
+    const Error manualEmitErr = emitSvgLinePath(manual.projectedPoints(), manual.projectedRingSizes().data(), manual.projectedRingSizes().size(), manualSvgPath);
     REQUIRE(manualEmitErr == Error::Ok);
 
     Workspace<16, 4> oneCall;
-    const Error err = projectLinesToSvg(oneCall, input, center, 1.0f);
+    Buffer<char, 256> oneCallSvgPath;
+    const Error err = projectLinesToSvg(oneCall, oneCallSvgPath, input, center, 1.0f);
     REQUIRE(err == Error::Ok);
 
-    REQUIRE(oneCall.svgPath.size() == manual.svgPath.size());
-    CHECK(std::memcmp(oneCall.svgPath.data(), manual.svgPath.data(), manual.svgPath.size()) == 0);
+    REQUIRE(oneCallSvgPath.size() == manualSvgPath.size());
+    CHECK(std::memcmp(oneCallSvgPath.data(), manualSvgPath.data(), manualSvgPath.size()) == 0);
 }
 
 TEST_CASE("cylindrical::projectRingsToSvg propagates a pipeline capacity failure without calling emitSvgPath")
@@ -94,7 +98,8 @@ TEST_CASE("cylindrical::projectRingsToSvg propagates a pipeline capacity failure
     // must fail, so projectRingsToSvg should return that same error
     // without ever reaching emitSvgPath.
     Workspace<1, 4> tooSmall;
-    const Error err = projectRingsToSvg(tooSmall, input, center, 1.0f);
+    Buffer<char, 256> svgPath;
+    const Error err = projectRingsToSvg(tooSmall, svgPath, input, center, 1.0f);
     CHECK(err == Error::CapacityExceeded);
-    CHECK(tooSmall.svgPath.size() == 0);
+    CHECK(svgPath.size() == 0);
 }

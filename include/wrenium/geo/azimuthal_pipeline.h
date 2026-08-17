@@ -66,9 +66,9 @@ namespace detail {
 // azimuthal projectX function shares it deliberately, so reordering one
 // alone would be its own hazard.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <Point (*ProjectFn)(const GeoPoint &, float), std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <Point (*ProjectFn)(const GeoPoint &, float), std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
-    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    Workspace<MaxPoints, MaxRings, MaxRingPoints> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
     float clipRadiusRad,
@@ -221,9 +221,9 @@ inline Error projectRings(
 /// not meant to be called directly.
 // See detail::projectRings's identical parameter pair and NOLINT rationale above.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <Point (*ProjectFn)(const GeoPoint &, float), std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <Point (*ProjectFn)(const GeoPoint &, float), std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
-    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    Workspace<MaxPoints, MaxRings, MaxRingPoints> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
     float clipRadiusRad,
@@ -346,9 +346,9 @@ inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scal
 // projectX function shares it deliberately, so reordering one alone
 // would be its own hazard.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectRings(
-    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    Workspace<MaxPoints, MaxRings, MaxRingPoints> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
     float clipRadiusRad,
@@ -378,9 +378,9 @@ inline Error projectRings(
 /// doesn't fit in @p workspace.
 // See projectRings's identical parameter pair and NOLINT rationale above.
 // NOLINTBEGIN(bugprone-easily-swappable-parameters)
-template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t OutputCharCapacity, std::size_t InputMaxPoints, std::size_t InputMaxRings>
+template <std::size_t MaxPoints, std::size_t MaxRings, std::size_t MaxRingPoints, std::size_t InputMaxPoints, std::size_t InputMaxRings>
 inline Error projectLines(
-    Workspace<MaxPoints, MaxRings, MaxRingPoints, OutputCharCapacity> &workspace,
+    Workspace<MaxPoints, MaxRings, MaxRingPoints> &workspace,
     const InputGeometry<InputMaxPoints, InputMaxRings> &input,
     const GeoPoint &center,
     float clipRadiusRad,

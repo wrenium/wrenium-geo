@@ -17,16 +17,21 @@
 ///
 /// After a successful call to either projection family's own
 /// `projectRings()`/`projectLines()` (azimuthal_pipeline.h,
-/// cylindrical_pipeline.h), read the result back via `svgPath` (SVG
-/// text), projectedPoint() (one point by index), or projectedPoints() +
-/// projectedRingSizes() (the raw projected points, to feed a different
-/// emitter for example). See the Workspace struct's own comment for how
-/// to size one.
+/// cylindrical_pipeline.h), read the result back via projectedPoint() (one
+/// point by index), or projectedPoints() + projectedRingSizes() (the raw
+/// projected points, to feed an emitter -- `emitSvgPath()`/
+/// `BinaryPathEmitter::encode()`, or a caller's own). See the Workspace
+/// struct's own comment for how to size one.
 
 namespace wrenium::geo {
 
-/// A single object owning every buffer the rotate/clip/project pipeline
-/// needs, sized via compile-time template parameters. Meant to have static
+/// A single object owning every *working* buffer the rotate/clip/project
+/// pipeline needs -- not the final SVG text output, which is a separate
+/// `Buffer<char, N>` (sized via
+/// svgOutputCharCapacityForRings()/svgOutputCharCapacityForLines(),
+/// float_format.h), passed to `emitSvgPath()`/`emitSvgLinePath()`
+/// alongside this Workspace's own projectedPoints()/projectedRingSizes().
+/// Sized via compile-time template parameters. Meant to have static
 /// storage duration -- a `static` global or a long-lived, caller-owned
 /// object -- never allocated fresh per call.
 ///
@@ -84,12 +89,12 @@ namespace wrenium::geo {
 ///   logs, or just the app itself for a while -- then read
 ///   `stageB.highWaterMark()`/`ringSizesB.highWaterMark()` back. Exact,
 ///   arc-bridging included, no guessing.
-/// - **OutputCharCapacity is different: it's calculable, not
-///   data-dependent at all.** The largest coordinate your output can
-///   ever reach is fully determined by numbers you already know -- your
-///   own clipRadiusKm x scale ceiling, or just viewportRadiusPx if going
-///   through makeViewport() (viewport.h; clipRadiusKm cancels out of
-///   that helper's own scale formula). Compute it directly with
+/// - **The SVG output buffer's own capacity is different: it's
+///   calculable, not data-dependent at all.** The largest coordinate the
+///   output can ever reach is fully determined by numbers already
+///   known -- the clipRadiusKm x scale ceiling, or just viewportRadiusPx
+///   if going through makeViewport() (viewport.h; clipRadiusKm cancels
+///   out of that helper's own scale formula). Compute it directly with
 ///   svgOutputCharCapacityForRings()/svgOutputCharCapacityForLines()
 ///   (float_format.h) instead of guessing *or* measuring.
 ///
@@ -101,11 +106,20 @@ namespace wrenium::geo {
 /// If a single Workspace is shared across a closed-ring dataset and an
 /// open-polyline dataset (both drawn through the same buffers, one at a
 /// time), workspace_sizing.h's sharedWorkspaceSizeFor() computes
-/// MaxPoints/MaxRings/OutputCharCapacity for that pair in one call,
-/// instead of doing steps 2 and 3 above by hand for each dataset and
-/// taking the max yourself.
+/// MaxPoints/MaxRings/the output buffer's own capacity for that pair in
+/// one call, instead of doing steps 2 and 3 above by hand for each
+/// dataset and taking the max yourself.
 ///
-/// ### 4. However you size it, check for Error::CapacityExceeded
+/// ### 4. Placing Workspace and the SVG output buffer separately
+///
+/// Workspace's own members -- stageB, ringSizesB, ringRotatedCache -- are
+/// read and written per point, every call. The SVG text buffer is
+/// written once, sequentially, at the end of one call, then read once.
+/// On a target with more than one kind of RAM (fast internal SRAM plus a
+/// slower external SDRAM, reached via a custom linker section), the two
+/// can be placed independently.
+///
+/// ### 5. However you size it, check for Error::CapacityExceeded
 ///
 /// A too-small capacity fails safely -- Error::CapacityExceeded, never
 /// memory corruption or a silent truncation -- but nothing forces a
@@ -121,11 +135,7 @@ namespace wrenium::geo {
 /// defaults to MaxPoints (always correct: no single ring can have more
 /// points than the whole dataset), but a caller who knows their actual
 /// largest ring is much smaller can override this down to reclaim RAM.
-/// @tparam OutputCharCapacity Capacity of the SVG-text output buffer (SVG
-/// is the "primary" format, hence it -- not the binary format -- gets a
-/// dedicated slot on Workspace itself; a consumer wanting binary output
-/// instantiates its own Buffer<std::uint8_t, N>).
-template <std::size_t MaxPoints, std::size_t MaxRings = 256, std::size_t MaxRingPoints = MaxPoints, std::size_t OutputCharCapacity = (MaxPoints * 24) + (MaxRings * 4) + 16>
+template <std::size_t MaxPoints, std::size_t MaxRings = 256, std::size_t MaxRingPoints = MaxPoints>
 struct Workspace
 {
     /// @cond WRENIUM_GEO_INTERNAL
@@ -149,11 +159,6 @@ struct Workspace
     // by a caller.
     GeoPoint ringRotatedCache[MaxRingPoints];
     /// @endcond
-
-    /// The final emitted SVG path text -- write into it directly (via
-    /// emitSvgPath(), for example) and read it back the same way, no
-    /// separate publish step needed.
-    Buffer<char, OutputCharCapacity> svgPath;
 
     /// The final projected point at @p index, valid after a successful
     /// call to either projection family's own `projectRings()`/

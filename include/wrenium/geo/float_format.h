@@ -159,15 +159,15 @@ constexpr std::size_t svgCharsForMaxCoordinate(float maxAbsValue)
     return 1 /* sign */ + intDigits + 1 /* '.' */ + static_cast<std::size_t>(kFloatFormatDecimalPlaces);
 }
 
-/// A correctly-sized OutputCharCapacity (workspace.h) for emitSvgPath()'s
+/// A correctly-sized capacity for the `Buffer<char, N>` passed to
+/// emitSvgPath() (svg_emitter.h) alongside a Workspace (workspace.h) for
 /// closed-ring output, computed from the shape of what you'll actually
 /// draw: @p maxPoints points across @p maxRings rings, no coordinate
-/// larger than @p maxAbsCoordinate. Workspace's own default (a flat 24
-/// bytes/point) is a guess; this is computed from numbers you already
-/// know instead.
+/// larger than @p maxAbsCoordinate -- computed from numbers you already
+/// know, not guessed.
 ///
-/// Usage -- override Workspace's 4th template parameter directly:
-/// `Workspace<6000, 200, 6000, svgOutputCharCapacityForRings(6000, 200, 400.0f)>`.
+/// Usage: `Buffer<char, svgOutputCharCapacityForRings(6000, 200, 400.0f)> svgPath;`
+/// alongside a `Workspace<6000, 200>`.
 /// @param maxPoints See Workspace's own MaxPoints.
 /// @param maxRings See Workspace's own MaxRings.
 /// @param maxAbsCoordinate The largest |x| or |y| your output will ever

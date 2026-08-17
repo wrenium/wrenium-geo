@@ -16,9 +16,10 @@
 
 namespace wrenium::geo {
 
-/// Workspace (workspace.h) capacities computed by sharedWorkspaceSizeFor(),
-/// below -- pass directly as its MaxPoints/MaxRings/OutputCharCapacity
-/// template arguments.
+/// Capacities computed by sharedWorkspaceSizeFor(), below -- maxPoints/
+/// maxRings pass directly as a shared Workspace's (workspace.h) own
+/// MaxPoints/MaxRings template arguments; outputCharCapacity sizes the
+/// separate `Buffer<char, N>` a caller declares alongside it.
 struct SharedWorkspaceSize
 {
     std::size_t maxPoints;
@@ -26,8 +27,9 @@ struct SharedWorkspaceSize
     std::size_t outputCharCapacity;
 };
 
-/// Computes a shared Workspace's MaxPoints/MaxRings/OutputCharCapacity from
-/// two datasets' own generated Info structs (topojson2bin, see
+/// Computes a shared Workspace's MaxPoints/MaxRings, plus its own separate
+/// SVG output buffer's capacity, from two datasets' own generated Info
+/// structs (topojson2bin, see
 /// tools/wrenium_geo_convert's own README section): the closed-ring
 /// dataset needs the bigger point margin (clipping can synthesize extra
 /// points closing a cut ring, "arc bridging" -- see workspace.h's own
@@ -48,10 +50,10 @@ struct SharedWorkspaceSize
 /// @param lineMargin Extra points reserved for the line dataset's own
 /// clip-crossing growth -- smaller than pointMargin since an open run can
 /// only gain a couple of points at a crossing, never a whole arc's worth.
-/// @return maxPoints/maxRings/outputCharCapacity, ready to pass as
-/// Workspace's own MaxPoints/MaxRings/OutputCharCapacity template
-/// arguments -- its MaxRingPoints can keep its own default (always safe,
-/// see Workspace's own comment).
+/// @return maxPoints/maxRings, ready to pass as a shared Workspace's own
+/// MaxPoints/MaxRings template arguments (its MaxRingPoints can keep its
+/// own default -- always safe, see Workspace's own comment), plus
+/// outputCharCapacity for a separately-declared `Buffer<char, N>`.
 // maxViewportPx/pointMargin/ringMargin/lineMargin are documented and
 // always passed in this order -- reordering one alone would be its own
 // hazard.

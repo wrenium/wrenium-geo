@@ -269,6 +269,7 @@ three calls a caller re-runs on every pan/zoom, just with a different
 
 ```cpp
 #include <wrenium/geo/azimuthal_svg.h>
+#include <wrenium/geo/float_format.h>
 #include <wrenium/geo/input_format.h>
 #include <wrenium/geo/workspace.h>
 
@@ -286,8 +287,14 @@ three calls a caller re-runs on every pan/zoom, just with a different
 constexpr std::size_t kMaxPoints = kWreniumGeoCoastlineDataInfo.pointCount + 1000;
 constexpr std::size_t kMaxRings = kWreniumGeoCoastlineDataInfo.ringCount + 50;
 
-wrenium::geo::Workspace<kMaxPoints, kMaxRings> coastline;   // working buffers + output, reused across calls
-wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> coastlineInput;   // parsed once, reused across calls
+// The largest viewportRadiusPx this app will ever pass to recomputeMap()
+// below -- svgPath's own capacity is computed from it, not guessed.
+constexpr float kMaxViewportPx = 2500.0f;
+constexpr std::size_t kOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForRings(kMaxPoints, kMaxRings, kMaxViewportPx);
+
+wrenium::geo::Workspace<kMaxPoints, kMaxRings> coastline;          // working buffers, reused across calls
+wrenium::geo::Buffer<char, kOutputCharCapacity> svgPath;           // final output text, reused across calls
+wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> coastlineInput; // parsed once, reused across calls
 
 // Called on every pan/zoom -- ensureLoaded() only actually parses the
 // coastline data the first time this runs, so there's no separate init
@@ -301,12 +308,12 @@ void recomputeMap(double centerLatDeg, double centerLonDeg, double clipRadiusKm,
     const float scale = static_cast<float>(viewportRadiusPx / clipRadiusKm); // output units per km
 
     // Rotate -> clip -> project every coastline ring, writing the SVG path
-    // `d` string directly into coastline.svgPath.
+    // `d` string directly into svgPath.
     wrenium::geo::azimuthal::projectRingsToSvg(
-        coastline, coastlineInput, center, clipRadiusRad, scale, wrenium::geo::azimuthal::ProjectionType::Equidistant);
+        coastline, svgPath, coastlineInput, center, clipRadiusRad, scale, wrenium::geo::azimuthal::ProjectionType::Equidistant);
 }
 
-// coastline.svgPath now holds "M x,y L x,y ... Z" path data, ready to draw.
+// svgPath now holds "M x,y L x,y ... Z" path data, ready to draw.
 ```
 
 To use the orthographic projection instead, pass `ProjectionType::Orthographic`
@@ -343,7 +350,7 @@ const float scale = 0.03f; // output units per km
 
 wrenium::geo::cylindrical::projectRings(coastline, coastlineInput, center, scale);
 wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
-                           coastline.projectedRingSizes().size(), coastline.svgPath);
+                           coastline.projectedRingSizes().size(), svgPath);
 ```
 
 ## Building

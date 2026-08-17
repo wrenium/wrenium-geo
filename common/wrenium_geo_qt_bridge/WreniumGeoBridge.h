@@ -33,7 +33,7 @@
 // type. Loads the checked-in real-world coastline data
 // (data/world_coastline_110m.h) once, then re-runs rotate->clip->project on
 // every computeCoastlineSvgPath() call. Both the direct-SVG and binary-then-decode
-// paths write their final result into m_workspace.svgPath, so the renderer
+// paths write their final result into m_svgPath, so the renderer
 // always reads the result the same way regardless of which path produced it.
 class WreniumGeoBridge : public QObject
 {
@@ -232,7 +232,8 @@ private:
     static constexpr std::size_t kOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForRings(kMaxPoints, kMaxRings, kMaxViewportPx);
     static constexpr std::size_t kBorderOutputCharCapacity = wrenium::geo::svgOutputCharCapacityForLines(kMaxBorderPoints, kMaxBorderRings, kMaxViewportPx);
 
-    wrenium::geo::Workspace<kMaxPoints, kMaxRings, kMaxRingPoints, kOutputCharCapacity> m_workspace;
+    wrenium::geo::Workspace<kMaxPoints, kMaxRings, kMaxRingPoints> m_workspace;
+    wrenium::geo::Buffer<char, kOutputCharCapacity> m_svgPath;
     // Points plus each ring's own [minLat, maxLat], loaded once (on the
     // first ensureLoaded() call, input_format.h) instead of reparsed by
     // azimuthal::projectRings on every recompute -- see that function's
@@ -240,7 +241,8 @@ private:
     wrenium::geo::InputGeometry<kMaxPoints, kMaxRings> m_input;
     wrenium::geo::Buffer<std::uint8_t, kMaxBinaryBytes> m_binaryPath;
 
-    wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings, kMaxBorderRingPoints, kBorderOutputCharCapacity> m_borderWorkspace;
+    wrenium::geo::Workspace<kMaxBorderPoints, kMaxBorderRings, kMaxBorderRingPoints> m_borderWorkspace;
+    wrenium::geo::Buffer<char, kBorderOutputCharCapacity> m_borderSvgPath;
     wrenium::geo::InputGeometry<kMaxBorderPoints, kMaxBorderRings> m_borderInput;
     wrenium::geo::Buffer<std::uint8_t, kMaxBorderBinaryBytes> m_borderBinaryPath;
 };
