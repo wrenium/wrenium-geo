@@ -63,6 +63,11 @@
 /// design above needs none of those special cases: every one of those
 /// live-reported bugs is naturally correct under it, as detailed in this
 /// file's git history and tests/test_mercator.cpp's own comments.
+///
+/// Also has generateGraticule() (below projectLines()), which fills an
+/// InputGeometry with lat/lon grid lines ready to feed into projectLines()
+/// itself -- a graticule is just line data like any other, generated
+/// instead of loaded from a checked-in dataset.
 
 namespace wrenium::geo::cylindrical {
 
@@ -771,6 +776,109 @@ inline Error projectLines(
             }
         } else {
             workspace.stageB.truncate(workspace.stageB.size() - pieceSize);
+        }
+    }
+
+    return Error::Ok;
+}
+
+/// Fills @p out with a lat/lon graticule -- meridian (constant-longitude)
+/// and parallel (constant-latitude) lines every @p stepDeg degrees,
+/// ready to feed straight into projectLines() above the same as any other
+/// line data. Any content @p out already holds is discarded first.
+///
+/// A meridian is just its own two endpoints (latitude clamped to
+/// +-kMercatorMaxLatRad, mercator.h) -- already a straight vertical line
+/// under this projection, no matter how many points describe it. A
+/// parallel spans the full 360 degrees of longitude, which this file's
+/// antimeridian handling can't take as one edge (it assumes every edge is
+/// a short geographic step), so it's split into 36 short segments
+/// instead, offset half a segment from -180 so a caller centered near 0
+/// degrees longitude doesn't land a parallel's own first point exactly on
+/// projectLines()'s own wrap boundary.
+///
+/// Meridians run from -180 up to (not including) 180 -- 360 and 0 are the
+/// same meridian. Parallels run strictly between -90 and 90 -- a
+/// "parallel" at a pole is a point, not a line. If 360 (or 180) doesn't
+/// divide evenly by @p stepDeg, the wraparound gap is shorter or longer
+/// than @p stepDeg elsewhere -- cosmetic, not a bug. Each parallel crosses
+/// projectLines()'s own map boundary once for any given center: expect
+/// two output pieces per parallel after projection, same as any other
+/// antimeridian-crossing line.
+/// @tparam MaxPoints Capacity of @p out's own InputGeometry::points.
+/// @tparam MaxRings Capacity of @p out's own InputGeometry::ringSizes
+/// (and ringMinLat/ringMaxLat) -- one entry per generated line.
+/// @param out Filled with the generated graticule's lines.
+/// @param stepDeg Spacing between adjacent meridians/parallels, in
+/// degrees -- must be in (0, 180).
+/// @return Error::Ok, or Error::CapacityExceeded if @p out's own capacity
+/// isn't enough for the requested @p stepDeg (a finer step needs a larger
+/// capacity), or Error::InvalidParameter if @p stepDeg is outside (0, 180).
+template <std::size_t MaxPoints, std::size_t MaxRings>
+inline Error generateGraticule(InputGeometry<MaxPoints, MaxRings> &out, float stepDeg)
+{
+    if (!(stepDeg > 0.0f) || stepDeg >= 180.0f) {
+        return Error::InvalidParameter;
+    }
+
+    out.points.clear();
+    out.ringSizes.clear();
+    out.ringMinLat.clear();
+    out.ringMaxLat.clear();
+
+    constexpr float kDegToRad = kPi / 180.0f;
+
+    const std::size_t meridianCount = static_cast<std::size_t>(360.0f / stepDeg);
+    for (std::size_t i = 0; i < meridianCount; ++i) {
+        const float lonRad = (-180.0f + static_cast<float>(i) * stepDeg) * kDegToRad;
+
+        Error err = out.points.pushBack(GeoPoint{-kMercatorMaxLatRad, lonRad});
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = out.points.pushBack(GeoPoint{kMercatorMaxLatRad, lonRad});
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = out.ringSizes.pushBack(2);
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = out.ringMinLat.pushBack(-kMercatorMaxLatRad);
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = out.ringMaxLat.pushBack(kMercatorMaxLatRad);
+        if (err != Error::Ok) {
+            return err;
+        }
+    }
+
+    constexpr std::size_t kParallelSegments = 36;
+    constexpr float kParallelSegmentDeg = 360.0f / static_cast<float>(kParallelSegments);
+    constexpr float kParallelLonShiftDeg = kParallelSegmentDeg * 0.5f;
+    const std::size_t parallelCount = static_cast<std::size_t>(180.0f / stepDeg) - 1;
+    for (std::size_t i = 0; i < parallelCount; ++i) {
+        const float latRad = (-90.0f + static_cast<float>(i + 1) * stepDeg) * kDegToRad;
+
+        for (std::size_t s = 0; s <= kParallelSegments; ++s) {
+            const float lonDeg = -180.0f + kParallelLonShiftDeg + static_cast<float>(s) * kParallelSegmentDeg;
+            const Error err = out.points.pushBack(GeoPoint{latRad, lonDeg * kDegToRad});
+            if (err != Error::Ok) {
+                return err;
+            }
+        }
+        Error err = out.ringSizes.pushBack(kParallelSegments + 1);
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = out.ringMinLat.pushBack(latRad);
+        if (err != Error::Ok) {
+            return err;
+        }
+        err = out.ringMaxLat.pushBack(latRad);
+        if (err != Error::Ok) {
+            return err;
         }
     }
 

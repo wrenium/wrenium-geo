@@ -32,6 +32,11 @@ anywhere in the library.
   an optional coarse visibility cull, with pole-latitude clamping and
   antimeridian-crossing splitting (including rings that fully encircle a
   pole) handled automatically. See the "Mercator" section below.
+- **Lat/lon graticule generation** (`wrenium::geo::cylindrical::generateGraticule`,
+  `cylindrical_pipeline.h`): fills an `InputGeometry` with meridian and
+  parallel lines at a given step, ready to project the same as any other
+  line data -- for a reference grid overlay, not just checked-in coastline/
+  border data.
 - **Fixed-capacity, zero-heap containers** throughout (`Buffer<T, Capacity>`),
   sized entirely at compile time via template parameters -- no
   `std::vector`, no dynamic allocation.

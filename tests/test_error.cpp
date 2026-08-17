@@ -13,7 +13,8 @@ TEST_CASE("errorToString gives every enumerator its own non-empty message")
 {
     const Error allErrors[] = {
         Error::Ok, Error::CapacityExceeded, Error::TooManyClipCrossings,
-        Error::UnrecognizedFormat, Error::TruncatedData, Error::MalformedStream};
+        Error::UnrecognizedFormat, Error::TruncatedData, Error::MalformedStream,
+        Error::InvalidParameter};
 
     for (const Error error : allErrors) {
         const char *message = errorToString(error);
