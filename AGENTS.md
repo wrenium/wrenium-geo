@@ -37,6 +37,24 @@ ctest --test-dir build --output-on-failure
 - `include/wrenium/geo/` may only contain MIT (or equivalent
   permissive) code -- no GPL/LGPL, no copyleft.
 
+## Comment style
+
+- State what the code does, once, where that fact belongs. Don't repeat
+  a design rationale at every call site that touches it, and don't
+  explain what's already obvious from the code itself (a function
+  taking two separate parameters doesn't need a comment saying they're
+  separate).
+- No design-history narration -- no "attempt N", no rejected-alternative
+  discussion, no "this used to be...", and no narrating an intermediate
+  state from earlier in the same unmerged change (an approach tried and
+  discarded before landing on the final one was never real history to a
+  reader -- nothing outside this development ever saw it). Describe
+  current behavior, and a genuine still-relevant limitation if there is
+  one -- not how either got there.
+- Prefer passive/impersonal phrasing over second-person instruction
+  ("sized via X" rather than "you size it via X").
+- Keep it short.
+
 ## Commits, versions, and tags
 
 - Subject: imperative, capitalized, no trailing period. Body (if any):
@@ -45,6 +63,7 @@ ctest --test-dir build --output-on-failure
   message (subject + body) aim for ~480 characters, 600 max -- a hard
   cap against runaway multi-paragraph essays. Mechanical commits
   (version bumps, pure renames) can be subject-only.
+- No trailers of any kind, just the commit message itself.
 - Don't reference files outside this repo (private notes, another
   project's docs) from commit messages, comments, or docs.
 - Tag immediately after every version bump -- don't defer it.
