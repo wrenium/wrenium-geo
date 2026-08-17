@@ -5,6 +5,7 @@
 
 #include "doctest/doctest.h"
 
+#include "wrenium/geo/detail/angle.h"
 #include "wrenium/geo/spherical.h"
 
 #include "fixtures/projection_golden.h"
@@ -23,6 +24,15 @@ constexpr float kToleranceRad = 1e-3f;
 bool approxEqual(float a, float b, float tolerance)
 {
     return std::fabs(a - b) <= tolerance;
+}
+
+// +-pi are the same bearing (due south), so a raw subtraction can see a
+// ~2*pi difference right at atan2's branch cut even when both values are
+// correct; wrap the delta first, same as any other bearing/longitude
+// comparison in this library.
+bool approxEqualAngle(float a, float b, float tolerance)
+{
+    return std::fabs(wrenium::geo::detail::wrapPi(a - b)) <= tolerance;
 }
 
 } // namespace
@@ -53,7 +63,7 @@ TEST_CASE("distanceKm/bearingRad match the projection's own golden values")
             // recovers the same expected bearing without a second,
             // independently-fudgeable golden number.
             const float expectedBearing = std::atan2(c.expectedX, -c.expectedY);
-            CHECK(approxEqual(bearingRad(from, to), expectedBearing, kToleranceRad));
+            CHECK(approxEqualAngle(bearingRad(from, to), expectedBearing, kToleranceRad));
         }
     }
 }
