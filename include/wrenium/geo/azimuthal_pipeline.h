@@ -9,6 +9,7 @@
 #include "wrenium/geo/contains.h"
 #include "wrenium/geo/detail/azimuthal/clip.h"
 #include "wrenium/geo/detail/azimuthal/equidistant.h"
+#include "wrenium/geo/detail/azimuthal/gnomonic.h"
 #include "wrenium/geo/detail/azimuthal/orthographic.h"
 #include "wrenium/geo/error.h"
 #include "wrenium/geo/geo_point.h"
@@ -22,7 +23,7 @@
 /// doesn't: rotating the sphere so the projection center becomes the pole,
 /// then clipping coastline/border data down to a configurable radius
 /// around it, then projecting what's left with a closed-form
-/// radial-distance formula (equidistant.h or orthographic.h).
+/// radial-distance formula (equidistant.h, orthographic.h, or gnomonic.h).
 
 namespace wrenium::geo::azimuthal {
 
@@ -38,6 +39,7 @@ enum class ProjectionType
 {
     Equidistant,  ///< True distance/bearing preserved from center (equidistant.h).
     Orthographic, ///< Rendered as if viewed from infinity; horizon at 90 degrees (orthographic.h).
+    Gnomonic,     ///< Every great circle is a straight line; diverges before 90 degrees (gnomonic.h).
 };
 
 namespace detail {
@@ -356,9 +358,14 @@ inline Error projectRings(
     ProjectionType projectionType)
 // NOLINTEND(bugprone-easily-swappable-parameters)
 {
-    return projectionType == ProjectionType::Orthographic
-        ? detail::projectRings<azimuthal::projectOrthographic>(workspace, input, center, clipRadiusRad, scale)
-        : detail::projectRings<azimuthal::projectEquidistant>(workspace, input, center, clipRadiusRad, scale);
+    switch (projectionType) {
+    case ProjectionType::Orthographic:
+        return detail::projectRings<azimuthal::projectOrthographic>(workspace, input, center, clipRadiusRad, scale);
+    case ProjectionType::Gnomonic:
+        return detail::projectRings<azimuthal::projectGnomonic>(workspace, input, center, clipRadiusRad, scale);
+    default:
+        return detail::projectRings<azimuthal::projectEquidistant>(workspace, input, center, clipRadiusRad, scale);
+    }
 }
 
 /// Border-line counterpart to @ref projectRings(): rotate -> clip -> project
@@ -388,9 +395,14 @@ inline Error projectLines(
     ProjectionType projectionType)
 // NOLINTEND(bugprone-easily-swappable-parameters)
 {
-    return projectionType == ProjectionType::Orthographic
-        ? detail::projectLines<azimuthal::projectOrthographic>(workspace, input, center, clipRadiusRad, scale)
-        : detail::projectLines<azimuthal::projectEquidistant>(workspace, input, center, clipRadiusRad, scale);
+    switch (projectionType) {
+    case ProjectionType::Orthographic:
+        return detail::projectLines<azimuthal::projectOrthographic>(workspace, input, center, clipRadiusRad, scale);
+    case ProjectionType::Gnomonic:
+        return detail::projectLines<azimuthal::projectGnomonic>(workspace, input, center, clipRadiusRad, scale);
+    default:
+        return detail::projectLines<azimuthal::projectEquidistant>(workspace, input, center, clipRadiusRad, scale);
+    }
 }
 
 /// A single projected point and whether it fell inside the clip circle.
@@ -438,9 +450,17 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
     }
 
     result.visible = true;
-    result.point = projectionType == ProjectionType::Orthographic
-        ? detail::projectPoint<azimuthal::projectOrthographic>(rotated, scale)
-        : detail::projectPoint<azimuthal::projectEquidistant>(rotated, scale);
+    switch (projectionType) {
+    case ProjectionType::Orthographic:
+        result.point = detail::projectPoint<azimuthal::projectOrthographic>(rotated, scale);
+        break;
+    case ProjectionType::Gnomonic:
+        result.point = detail::projectPoint<azimuthal::projectGnomonic>(rotated, scale);
+        break;
+    default:
+        result.point = detail::projectPoint<azimuthal::projectEquidistant>(rotated, scale);
+        break;
+    }
     return result;
 }
 
@@ -466,22 +486,28 @@ inline ProjectedPoint projectPoint(const GeoPoint &rawPoint, const GeoPoint &cen
 /// @return The geo point that this same @p projectionType/rotate() would map to @p point.
 inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scale, ProjectionType projectionType) // NOLINT(bugprone-easily-swappable-parameters)
 {
-    return projectionType == ProjectionType::Orthographic
-        ? detail::unproject<azimuthal::unprojectOrthographic>(point, center, scale)
-        : detail::unproject<azimuthal::unprojectEquidistant>(point, center, scale);
+    switch (projectionType) {
+    case ProjectionType::Orthographic:
+        return detail::unproject<azimuthal::unprojectOrthographic>(point, center, scale);
+    case ProjectionType::Gnomonic:
+        return detail::unproject<azimuthal::unprojectGnomonic>(point, center, scale);
+    default:
+        return detail::unproject<azimuthal::unprojectEquidistant>(point, center, scale);
+    }
 }
 
 /// The on-screen radius a ring drawn at real-world distance @p distanceKm
-/// from the projection center would have -- correct for either radial-
-/// distance formula, unlike assuming radius scales linearly with distance
-/// (only true for equidistant; orthographic's own radius is proportional
-/// to sin(centralAngle), not centralAngle itself, so the same assumption
-/// reused there silently draws rings at the wrong spacing).
+/// from the projection center would have -- correct for any of the
+/// radial-distance formulas, unlike assuming radius scales linearly with
+/// distance (only true for equidistant; orthographic's own radius is
+/// proportional to sin(centralAngle) and gnomonic's to tan(centralAngle),
+/// not centralAngle itself, so the same assumption reused there silently
+/// draws rings at the wrong spacing).
 ///
-/// Reuses #projectEquidistant / #projectOrthographic directly (a
-/// synthetic rotated point at bearing 0, so only the radius half of their
-/// own north-up convention survives) rather than a separate formula, so
-/// this can never drift out of sync with what projectRings()/
+/// Reuses #projectEquidistant / #projectOrthographic / #projectGnomonic
+/// directly (a synthetic rotated point at bearing 0, so only the radius
+/// half of their own north-up convention survives) rather than a separate
+/// formula, so this can never drift out of sync with what projectRings()/
 /// projectLines()/projectPoint() actually draw.
 /// @param distanceKm Real-world distance from the projection center.
 /// @param scale Output units per kilometer -- same convention as
@@ -493,10 +519,19 @@ inline GeoPoint unproject(const Point &point, const GeoPoint &center, float scal
 inline float rangeRingRadius(float distanceKm, float scale, ProjectionType projectionType) // NOLINT(bugprone-easily-swappable-parameters)
 {
     const float centralAngle = distanceKm / kEarthRadiusKm;
-    const GeoPoint rotated{kHalfPi - centralAngle, 0.0f}; // bearing 0 -- doesn't affect the radius either formula returns
-    const Point projected = projectionType == ProjectionType::Orthographic
-        ? azimuthal::projectOrthographic(rotated, scale)
-        : azimuthal::projectEquidistant(rotated, scale);
+    const GeoPoint rotated{kHalfPi - centralAngle, 0.0f}; // bearing 0 -- doesn't affect the radius any formula returns
+    Point projected;
+    switch (projectionType) {
+    case ProjectionType::Orthographic:
+        projected = azimuthal::projectOrthographic(rotated, scale);
+        break;
+    case ProjectionType::Gnomonic:
+        projected = azimuthal::projectGnomonic(rotated, scale);
+        break;
+    default:
+        projected = azimuthal::projectEquidistant(rotated, scale);
+        break;
+    }
     return projected.y < 0.0f ? -projected.y : projected.y;
 }
 

@@ -9,6 +9,7 @@ add_executable(tests
     test_projection.cpp
     test_spherical.cpp
     test_orthographic.cpp
+    test_gnomonic.cpp
     test_mercator.cpp
     test_clip.cpp
     test_contains.cpp
