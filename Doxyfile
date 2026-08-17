@@ -3,7 +3,7 @@
 # Generate with: doxygen Doxyfile (output: docs/api/html/index.html)
 
 PROJECT_NAME           = "wrenium-geo"
-PROJECT_NUMBER         = 0.9.0
+PROJECT_NUMBER         = 0.10.0
 PROJECT_BRIEF          = "Header-only geometry library projecting geographic coastline and border data from an arbitrary center point"
 OUTPUT_DIRECTORY       = docs/api
 
