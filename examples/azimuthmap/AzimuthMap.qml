@@ -3,6 +3,7 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import QtQuick.Layouts
 import QtQuick.Shapes
 
@@ -33,17 +34,28 @@ ApplicationWindow {
     property string currentCoastlineSvgPath: ""
     property string currentBorderSvgPath: ""
     // Selects the radial-distance formula (WreniumGeoBridge's
-    // useOrthographic parameter): equidistant (false, distance-preserving
-    // range rings) or orthographic (true, "viewed from space" -- the disk
-    // edge is the horizon).
-    property bool orthographic: false
+    // AzimuthalProjection enum): equidistant (distance-preserving range
+    // rings), orthographic ("viewed from space" -- the disk edge is the
+    // horizon), or gnomonic (every great circle is a straight line).
+    property int projection: WreniumGeoBridge.Equidistant
     // Orthographic only makes geometric sense up to the horizon
     // (centralAngle == 90 deg); beyond that it folds back on itself.
-    // rangeKm can be set well past that (up to the antipode, 20020 km,
+    // Gnomonic's own radius diverges approaching the horizon rather than
+    // folding back, so it needs a tighter practical clamp -- 75 degrees
+    // leaves the disc's edge still a finite, readable size rather than
+    // the extreme foreshortening the last few degrees before 90 produce.
+    // rangeKm can be set well past either (up to the antipode, 20020 km,
     // which is meaningful for equidistant) so clamp only what's actually
     // sent to the projection, not the slider/field itself.
     readonly property real horizonKm: wreniumGeoBridge.earthRadiusKm() * Math.PI / 2
-    readonly property real effectiveRangeKm: orthographic ? Math.min(rangeKm, horizonKm) : rangeKm
+    readonly property real gnomonicMaxKm: wreniumGeoBridge.earthRadiusKm() * (75.0 * Math.PI / 180.0)
+    readonly property real effectiveRangeKm: {
+        if (projection === WreniumGeoBridge.Orthographic)
+            return Math.min(rangeKm, horizonKm)
+        if (projection === WreniumGeoBridge.Gnomonic)
+            return Math.min(rangeKm, gnomonicMaxKm)
+        return rangeKm
+    }
 
     WreniumGeoBridge {
         id: wreniumGeoBridge
@@ -52,9 +64,9 @@ ApplicationWindow {
     function recomputePath() {
         const viewportRadiusPx = Math.min(mapArea.width, mapArea.height) / 2
         currentCoastlineSvgPath = wreniumGeoBridge.computeCoastlineSvgPath(
-            centerLatDeg, centerLonDeg, effectiveRangeKm, viewportRadiusPx, false, orthographic)
+            centerLatDeg, centerLonDeg, effectiveRangeKm, viewportRadiusPx, false, projection)
         currentBorderSvgPath = wreniumGeoBridge.computeBorderSvgPath(
-            centerLatDeg, centerLonDeg, effectiveRangeKm, viewportRadiusPx, false, orthographic)
+            centerLatDeg, centerLonDeg, effectiveRangeKm, viewportRadiusPx, false, projection)
     }
 
     property double _lastRecomputeMs: 0
@@ -103,6 +115,38 @@ ApplicationWindow {
     function zoomBy(factor) {
         rangeKm = Math.max(10, Math.min(20020, rangeKm * factor))
         recomputePathThrottled()
+    }
+
+    function projectionName() {
+        if (projection === WreniumGeoBridge.Orthographic)
+            return qsTr("orthographic")
+        if (projection === WreniumGeoBridge.Gnomonic)
+            return qsTr("gnomonic")
+        return qsTr("equidistant")
+    }
+
+    // The clamp limit for the current projection, or 0 if it has none
+    // (equidistant) -- shared by statusLine() below.
+    function clampLimitKm() {
+        if (projection === WreniumGeoBridge.Orthographic)
+            return horizonKm
+        if (projection === WreniumGeoBridge.Gnomonic)
+            return gnomonicMaxKm
+        return 0
+    }
+
+    function statusLine() {
+        const base = qsTr("center=(%1, %2) deg  range=%3 km  projection=%4")
+            .arg(centerLatDeg.toFixed(4))
+            .arg(centerLonDeg.toFixed(4))
+            .arg(rangeKm.toFixed(0))
+            .arg(projectionName())
+
+        const limitKm = clampLimitKm()
+        if (limitKm > 0 && rangeKm > limitKm) {
+            return base + qsTr(" (clamped to %1 km)").arg(limitKm.toFixed(0))
+        }
+        return base
     }
 
     onCenterLatDegChanged: latField.text = centerLatDeg.toFixed(4)
@@ -193,13 +237,13 @@ ApplicationWindow {
                 }
             }
 
-            Button {
-                id: projectionButton
-                checkable: true
-                checked: root.orthographic
-                text: checked ? qsTr("Orthographic") : qsTr("Equidistant")
-                onToggled: {
-                    root.orthographic = checked
+            ComboBox {
+                id: projectionCombo
+                Layout.preferredWidth: 130
+                model: [qsTr("Equidistant"), qsTr("Orthographic"), qsTr("Gnomonic")]
+                currentIndex: root.projection
+                onActivated: (index) => {
+                    root.projection = index
                     root.recomputePath()
                 }
             }
@@ -221,17 +265,7 @@ ApplicationWindow {
             Layout.fillWidth: true
             color: "#8a97a6"
             font.pixelSize: 11
-            text: root.orthographic && root.rangeKm > root.horizonKm
-                ? qsTr("center=(%1, %2) deg  range=%3 km  projection=orthographic (clamped to horizon %4 km)")
-                    .arg(root.centerLatDeg.toFixed(4))
-                    .arg(root.centerLonDeg.toFixed(4))
-                    .arg(root.rangeKm.toFixed(0))
-                    .arg(root.horizonKm.toFixed(0))
-                : qsTr("center=(%1, %2) deg  range=%3 km  projection=%4")
-                    .arg(root.centerLatDeg.toFixed(4))
-                    .arg(root.centerLonDeg.toFixed(4))
-                    .arg(root.rangeKm.toFixed(0))
-                    .arg(root.orthographic ? qsTr("orthographic") : qsTr("equidistant"))
+            text: root.statusLine()
         }
 
         Item {
@@ -242,37 +276,65 @@ ApplicationWindow {
             onWidthChanged: root.recomputePathThrottled()
             onHeightChanged: root.recomputePathThrottled()
 
+            readonly property real discRadius: Math.min(width, height) / 2
+
+            // The round "disc" backdrop -- doubles as discMask's own mask
+            // shape below, so the coastline is cropped to exactly the
+            // same circle this paints, not just an approximation of it.
             Rectangle {
-                readonly property real discRadius: Math.min(mapArea.width, mapArea.height) / 2
+                id: discBackground
                 anchors.centerIn: parent
-                width: discRadius * 2
+                width: mapArea.discRadius * 2
                 height: width
                 radius: width / 2
                 color: "#132a3d"
                 border.color: "#0a1420"
             }
 
-            Shape {
-                id: coastlineShape
+            // Equidistant/orthographic never project outside this disc (a
+            // provable property of each formula -- orthographic's
+            // sin(centralAngle) <= centralAngle, equidistant's radius is
+            // exactly linear in it), but gnomonic's tan(centralAngle)
+            // grows faster than linear, so its own projected points
+            // routinely land outside it even from well inside the clip
+            // circle. A plain `clip: true` only crops to a rectangle, not
+            // this disc's own round shape, so gnomonic needs an actual
+            // circular mask -- MultiEffect against discBackground's own
+            // shape, applied uniformly to all three projections (a no-op
+            // for the two that never reach the edge anyway).
+            Item {
+                id: coastlineSource
                 anchors.fill: parent
-                transform: Translate {
-                    x: coastlineShape.width / 2
-                    y: coastlineShape.height / 2
-                }
 
-                ShapePath {
-                    fillColor: "#4a5c3c"
-                    strokeColor: "#c9d4bd"
-                    strokeWidth: 1
-                    fillRule: ShapePath.OddEvenFill
-                    PathSvg { path: root.currentCoastlineSvgPath }
+                Shape {
+                    id: coastlineShape
+                    anchors.fill: parent
+                    transform: Translate {
+                        x: coastlineShape.width / 2
+                        y: coastlineShape.height / 2
+                    }
+
+                    ShapePath {
+                        fillColor: "#4a5c3c"
+                        strokeColor: "#c9d4bd"
+                        strokeWidth: 1
+                        fillRule: ShapePath.OddEvenFill
+                        PathSvg { path: root.currentCoastlineSvgPath }
+                    }
+                    ShapePath {
+                        fillColor: "transparent"
+                        strokeColor: "#a8935f"
+                        strokeWidth: 1
+                        PathSvg { path: root.currentBorderSvgPath }
+                    }
                 }
-                ShapePath {
-                    fillColor: "transparent"
-                    strokeColor: "#a8935f"
-                    strokeWidth: 1
-                    PathSvg { path: root.currentBorderSvgPath }
-                }
+            }
+
+            MultiEffect {
+                anchors.fill: coastlineSource
+                source: coastlineSource
+                maskEnabled: true
+                maskSource: discBackground
             }
 
             MouseArea {
