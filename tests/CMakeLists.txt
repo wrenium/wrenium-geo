@@ -17,6 +17,7 @@ add_executable(tests
     test_pipeline.cpp
     test_azimuthal_svg.cpp
     test_cylindrical_svg.cpp
+    test_conic_svg.cpp
     test_input_format.cpp
     test_binary_emitter.cpp
     test_binary_format.cpp
