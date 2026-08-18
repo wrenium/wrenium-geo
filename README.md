@@ -91,9 +91,9 @@ exceptions or RTTI anywhere in the library.
 
 ## Projections
 
-| Azimuthal equidistant | Azimuthal orthographic | Web Mercator |
-| --- | --- | --- |
-| ![Azimuthal equidistant sample](docs/equidistant-sample.png) | ![Azimuthal orthographic sample](docs/orthographic-sample.png) | ![Web Mercator sample](docs/mercator-sample.png) |
+| Azimuthal equidistant | Azimuthal orthographic | Azimuthal gnomonic | Web Mercator |
+| --- | --- | --- | --- |
+| ![Azimuthal equidistant sample](docs/equidistant-sample.png) | ![Azimuthal orthographic sample](docs/orthographic-sample.png) | ![Azimuthal gnomonic sample](docs/gnomonic-sample.png) | ![Web Mercator sample](docs/mercator-sample.png) |
 
 **Azimuthal equidistant** centers the map on any point and preserves true
 distance and bearing from that center exactly -- a straight line from the

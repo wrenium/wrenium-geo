@@ -27,6 +27,7 @@ path = [
     "docs/azimuthmap-screenshot.png",
     "docs/equidistant-sample.png",
     "docs/orthographic-sample.png",
+    "docs/gnomonic-sample.png",
     "docs/mercator-sample.png",
 ]
 SPDX-FileCopyrightText = "2026 Tommi Tauriainen"
