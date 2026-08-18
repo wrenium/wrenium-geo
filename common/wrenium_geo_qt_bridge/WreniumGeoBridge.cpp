@@ -10,6 +10,7 @@
 #include <wrenium/geo/azimuthal_pipeline.h>
 #include <wrenium/geo/azimuthal_svg.h>
 #include <wrenium/geo/binary_emitter.h>
+#include <wrenium/geo/conic_svg.h>
 #include <wrenium/geo/cylindrical_pipeline.h>
 #include <wrenium/geo/cylindrical_svg.h>
 #include <wrenium/geo/detail/cylindrical/mercator.h>
@@ -25,6 +26,18 @@
 namespace {
 
 constexpr double kRadToDeg = 180.0 / 3.14159265358979323846;
+constexpr double kDegToRad = 1.0 / kRadToDeg;
+
+wrenium::geo::conic::LambertConformalConicFrame makeConicFrame(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg)
+{
+    const wrenium::geo::conic::LambertConformalConic params{
+        static_cast<float>(standardParallel1Deg * kDegToRad),
+        static_cast<float>(standardParallel2Deg * kDegToRad),
+        static_cast<float>(originLatDeg * kDegToRad),
+        static_cast<float>(originLonDeg * kDegToRad),
+    };
+    return wrenium::geo::conic::makeLambertConformalConicFrame(params);
+}
 
 // Logs why a pipeline/emit/load call failed instead of leaving the caller
 // with only an empty QString and no clue.
@@ -338,4 +351,226 @@ double WreniumGeoBridge::clampMercatorCenterLatDeg(double latDeg, double halfWid
     const float latRad = static_cast<float>(latDeg) * static_cast<float>(1.0 / kRadToDeg);
     const float clampedLatRad = wrenium::geo::cylindrical::clampCenterLatForViewport(latRad, scale, static_cast<float>(viewportHeightPx));
     return static_cast<double>(clampedLatRad) * kRadToDeg;
+}
+
+QString WreniumGeoBridge::computeConicCoastlineSvgPath(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter)
+{
+    const wrenium::geo::Error loadErr = m_input.ensureLoaded(kWreniumGeoWorldCoastline110m, kWreniumGeoWorldCoastline110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeConicCoastlineSvgPath: ensureLoaded", loadErr);
+        return QString();
+    }
+    if (halfWidthKm <= 0.0 || viewportWidthPx <= 0.0 || viewportHeightPx <= 0.0) {
+        return QString();
+    }
+
+    const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, originLonDeg);
+    const float scale = static_cast<float>(viewportWidthPx / 2.0 / halfWidthKm);
+    // See computeMercatorCoastlineSvgPath's identical comment.
+    const float clipLonRad = static_cast<float>(halfWidthKm / wrenium::geo::kEarthRadiusKm);
+    const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
+    const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
+
+    wrenium::geo::Error err;
+    if (!useBinaryEmitter) {
+        err = wrenium::geo::conic::projectRingsToSvg(m_workspace, m_svgPath, m_input, frame, scale, clipLatRad, clipLonRad);
+    } else {
+        err = wrenium::geo::conic::projectRings(m_workspace, m_input, frame, scale, clipLatRad, clipLonRad);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::BinaryPathEmitter<>::encode(
+                m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
+                m_workspace.projectedRingSizes().size(), m_binaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+                m_binaryPath.data(), m_binaryPath.size(), m_svgPath);
+        }
+    }
+
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeConicCoastlineSvgPath", err);
+        return QString();
+    }
+
+    return QString::fromLatin1(m_svgPath.data(), static_cast<int>(m_svgPath.size()));
+}
+
+QString WreniumGeoBridge::computeConicBorderSvgPath(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter)
+{
+    const wrenium::geo::Error loadErr = m_borderInput.ensureLoaded(kWreniumGeoWorldBorders110m, kWreniumGeoWorldBorders110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeConicBorderSvgPath: ensureLoaded", loadErr);
+        return QString();
+    }
+    if (halfWidthKm <= 0.0 || viewportWidthPx <= 0.0 || viewportHeightPx <= 0.0) {
+        return QString();
+    }
+
+    const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, originLonDeg);
+    const float scale = static_cast<float>(viewportWidthPx / 2.0 / halfWidthKm);
+    const float clipLonRad = static_cast<float>(halfWidthKm / wrenium::geo::kEarthRadiusKm);
+    const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
+    const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
+
+    wrenium::geo::Error err;
+    if (!useBinaryEmitter) {
+        err = wrenium::geo::conic::projectLinesToSvg(m_borderWorkspace, m_borderSvgPath, m_borderInput, frame, scale, clipLatRad, clipLonRad);
+    } else {
+        err = wrenium::geo::conic::projectLines(m_borderWorkspace, m_borderInput, frame, scale, clipLatRad, clipLonRad);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::LineBinaryPathEmitter<>::encode(
+                m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
+                m_borderWorkspace.projectedRingSizes().size(), m_borderBinaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+                m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderSvgPath);
+        }
+    }
+
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeConicBorderSvgPath", err);
+        return QString();
+    }
+
+    return QString::fromLatin1(m_borderSvgPath.data(), static_cast<int>(m_borderSvgPath.size()));
+}
+
+QVariantList WreniumGeoBridge::projectConicPoint(double latDeg, double lonDeg, double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx) const
+{
+    if (halfWidthKm <= 0.0 || viewportWidthPx <= 0.0) {
+        return {0.0, 0.0};
+    }
+
+    const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, originLonDeg);
+    const wrenium::geo::GeoPoint point = wrenium::geo::makeGeoPoint(static_cast<float>(latDeg), static_cast<float>(lonDeg));
+    const float scale = static_cast<float>(viewportWidthPx / 2.0 / halfWidthKm);
+    const wrenium::geo::Point projected = wrenium::geo::conic::project(point, frame, scale);
+    return {static_cast<double>(projected.x), static_cast<double>(projected.y)};
+}
+
+QVariantList WreniumGeoBridge::unprojectConicPoint(double pointX, double pointY, double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx) const
+{
+    if (halfWidthKm <= 0.0 || viewportWidthPx <= 0.0) {
+        return {0.0, 0.0};
+    }
+
+    const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, originLonDeg);
+    const float scale = static_cast<float>(viewportWidthPx / 2.0 / halfWidthKm);
+    const wrenium::geo::Point point{static_cast<float>(pointX), static_cast<float>(pointY)};
+    const wrenium::geo::GeoPoint result = wrenium::geo::conic::unproject(point, frame, scale);
+    return {static_cast<double>(result.latRad) * kRadToDeg, static_cast<double>(result.lonRad) * kRadToDeg};
+}
+
+QString WreniumGeoBridge::computeGnomonicCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter)
+{
+    const wrenium::geo::Error loadErr = m_input.ensureLoaded(kWreniumGeoWorldCoastline110m, kWreniumGeoWorldCoastline110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeGnomonicCoastlineSvgPath: ensureLoaded", loadErr);
+        return QString();
+    }
+    if (clipRadiusKm <= 0.0 || viewportRadiusPx <= 0.0) {
+        return QString();
+    }
+
+    const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
+    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+
+    wrenium::geo::Error err;
+    if (!useBinaryEmitter) {
+        err = wrenium::geo::azimuthal::projectRingsToSvg(m_workspace, m_svgPath, m_input, center, viewport.clipRadiusRad, viewport.scale, wrenium::geo::azimuthal::ProjectionType::Gnomonic);
+    } else {
+        err = wrenium::geo::azimuthal::projectRings(m_workspace, m_input, center, viewport.clipRadiusRad, viewport.scale, wrenium::geo::azimuthal::ProjectionType::Gnomonic);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::BinaryPathEmitter<>::encode(
+                m_workspace.projectedPoints(), m_workspace.projectedRingSizes().data(),
+                m_workspace.projectedRingSizes().size(), m_binaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+                m_binaryPath.data(), m_binaryPath.size(), m_svgPath);
+        }
+    }
+
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeGnomonicCoastlineSvgPath", err);
+        return QString();
+    }
+
+    return QString::fromLatin1(m_svgPath.data(), static_cast<int>(m_svgPath.size()));
+}
+
+QString WreniumGeoBridge::computeGnomonicBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter)
+{
+    const wrenium::geo::Error loadErr = m_borderInput.ensureLoaded(kWreniumGeoWorldBorders110m, kWreniumGeoWorldBorders110mSize);
+    if (loadErr != wrenium::geo::Error::Ok) {
+        warnOnError("computeGnomonicBorderSvgPath: ensureLoaded", loadErr);
+        return QString();
+    }
+    if (clipRadiusKm <= 0.0 || viewportRadiusPx <= 0.0) {
+        return QString();
+    }
+
+    const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
+    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+
+    wrenium::geo::Error err;
+    if (!useBinaryEmitter) {
+        err = wrenium::geo::azimuthal::projectLinesToSvg(m_borderWorkspace, m_borderSvgPath, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, wrenium::geo::azimuthal::ProjectionType::Gnomonic);
+    } else {
+        err = wrenium::geo::azimuthal::projectLines(m_borderWorkspace, m_borderInput, center, viewport.clipRadiusRad, viewport.scale, wrenium::geo::azimuthal::ProjectionType::Gnomonic);
+        if (err == wrenium::geo::Error::Ok) {
+            err = wrenium::geo::LineBinaryPathEmitter<>::encode(
+                m_borderWorkspace.projectedPoints(), m_borderWorkspace.projectedRingSizes().data(),
+                m_borderWorkspace.projectedRingSizes().size(), m_borderBinaryPath);
+        }
+        if (err == wrenium::geo::Error::Ok) {
+            err = BinaryPathDecoderExample::BinaryPathDecoder<>::decode(
+                m_borderBinaryPath.data(), m_borderBinaryPath.size(), m_borderSvgPath);
+        }
+    }
+
+    if (err != wrenium::geo::Error::Ok) {
+        warnOnError("computeGnomonicBorderSvgPath", err);
+        return QString();
+    }
+
+    return QString::fromLatin1(m_borderSvgPath.data(), static_cast<int>(m_borderSvgPath.size()));
+}
+
+QVariantList WreniumGeoBridge::projectGnomonicPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx) const
+{
+    if (clipRadiusKm <= 0.0 || viewportRadiusPx <= 0.0) {
+        return {0.0, 0.0, false};
+    }
+
+    const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
+    const wrenium::geo::GeoPoint rawPoint = wrenium::geo::makeGeoPoint(static_cast<float>(lat), static_cast<float>(lon));
+    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+
+    const wrenium::geo::azimuthal::ProjectedPoint projected = wrenium::geo::azimuthal::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale, wrenium::geo::azimuthal::ProjectionType::Gnomonic);
+
+    if (!projected.visible) {
+        return {0.0, 0.0, false};
+    }
+    return {static_cast<double>(projected.point.x), static_cast<double>(projected.point.y), true};
+}
+
+QVariantList WreniumGeoBridge::interpolateGreatCircle(double fromLatDeg, double fromLonDeg, double toLatDeg, double toLonDeg, double t) const
+{
+    const wrenium::geo::GeoPoint from = wrenium::geo::makeGeoPoint(static_cast<float>(fromLatDeg), static_cast<float>(fromLonDeg));
+    const wrenium::geo::GeoPoint to = wrenium::geo::makeGeoPoint(static_cast<float>(toLatDeg), static_cast<float>(toLonDeg));
+    const wrenium::geo::GeoPoint result = wrenium::geo::interpolate(from, to, static_cast<float>(t));
+    return {static_cast<double>(result.latRad) * kRadToDeg, static_cast<double>(result.lonRad) * kRadToDeg};
+}
+
+double WreniumGeoBridge::bearingDeg(double fromLatDeg, double fromLonDeg, double toLatDeg, double toLonDeg) const
+{
+    const wrenium::geo::GeoPoint from = wrenium::geo::makeGeoPoint(static_cast<float>(fromLatDeg), static_cast<float>(fromLonDeg));
+    const wrenium::geo::GeoPoint to = wrenium::geo::makeGeoPoint(static_cast<float>(toLatDeg), static_cast<float>(toLonDeg));
+    double deg = static_cast<double>(wrenium::geo::bearingRad(from, to)) * kRadToDeg;
+    if (deg < 0.0) {
+        deg += 360.0;
+    }
+    return deg;
 }
