@@ -70,8 +70,9 @@ if(PROJECT_IS_TOP_LEVEL)
 
         add_subdirectory(examples/azimuthmap)
         add_subdirectory(examples/mercatormap)
+        add_subdirectory(examples/lccmap)
         add_custom_target(examples)
-        add_dependencies(examples azimuthmap mercatormap)
+        add_dependencies(examples azimuthmap mercatormap lccmap)
 
         add_subdirectory(demos/rotator)
         add_subdirectory(demos/radar)

@@ -223,6 +223,19 @@ public:
     // a chart click resolve to a real (lat, lon), the same way
     // unprojectMercatorPoint() does for the Mercator family.
     Q_INVOKABLE QVariantList unprojectConicPoint(double pointX, double pointY, double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx) const;
+
+    // wrenium::geo::conic::clampOriginLatForApexSafety() -- keeps an
+    // interactive viewer's own origin from panning/zooming close enough
+    // to this frame's finite pole to expose the wedge's own real angular
+    // gap (that function's own comment has the geometry). Only the
+    // standard parallels matter here (the frame's own n/rhoScale don't
+    // depend on origin) -- originLatDeg/originLonDeg are present anyway
+    // for symmetry with this bridge's other conic methods, and because
+    // building the frame needs some origin value regardless of whether
+    // it's read back out. viewportWidthPx/viewportHeightPx only matter
+    // for their ratio, so pass 0 for both if the viewport size isn't
+    // known yet.
+    Q_INVOKABLE double clampConicOriginLatDeg(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx) const;
     // NOLINTEND(bugprone-easily-swappable-parameters)
 
     // Gnomonic counterpart to computeCoastlineSvgPath, hardcoded to

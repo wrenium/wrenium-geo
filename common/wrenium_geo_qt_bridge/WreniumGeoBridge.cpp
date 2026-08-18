@@ -3,6 +3,7 @@
 
 #include "WreniumGeoBridge.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include <QDebug>
@@ -366,8 +367,22 @@ QString WreniumGeoBridge::computeConicCoastlineSvgPath(double standardParallel1D
 
     const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, originLonDeg);
     const float scale = static_cast<float>(viewportWidthPx / 2.0 / halfWidthKm);
-    // See computeMercatorCoastlineSvgPath's identical comment.
-    const float clipLonRad = static_cast<float>(halfWidthKm / wrenium::geo::kEarthRadiusKm);
+    // Conic's own screen x is `rho(lat) * sin(n * lonDiff) * scale`, a
+    // curve rather than the straight line computeMercatorCoastlineSvgPath's
+    // own comment covers, so no fixed halfWidthKm-derived window is
+    // rigorously safe: `rho` itself grows without bound approaching the
+    // frame's own far pole, so a point arbitrarily far in longitude can
+    // still reach the screen edge given a large enough `rho` there. What
+    // *is* bounded is `theta` itself -- always `n * wrapPi(lonDiff)`, so
+    // never more than `n * kPi` in magnitude for any single point -- so
+    // `kPi / |n|` is the widest raw-longitude difference this frame's own
+    // wedge can ever produce a distinct theta for; anything further is
+    // provably equivalent to a smaller difference already covered.
+    // Conservative by construction (this parameter's own contract), a
+    // fixed bound rather than something tuned to a particular
+    // halfWidthKm. The floor is purely a divide-by-zero guard, far below
+    // any real regional chart's own n.
+    const float clipLonRad = wrenium::geo::kPi / std::max(std::fabs(frame.n), 0.01f);
     const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
     const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
 
@@ -408,7 +423,8 @@ QString WreniumGeoBridge::computeConicBorderSvgPath(double standardParallel1Deg,
 
     const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, originLonDeg);
     const float scale = static_cast<float>(viewportWidthPx / 2.0 / halfWidthKm);
-    const float clipLonRad = static_cast<float>(halfWidthKm / wrenium::geo::kEarthRadiusKm);
+    // See computeConicCoastlineSvgPath's identical comment.
+    const float clipLonRad = wrenium::geo::kPi / std::max(std::fabs(frame.n), 0.01f);
     const float halfHeightKm = static_cast<float>(viewportHeightPx / 2.0 / scale);
     const float clipLatRad = halfHeightKm / wrenium::geo::kEarthRadiusKm;
 
@@ -460,6 +476,16 @@ QVariantList WreniumGeoBridge::unprojectConicPoint(double pointX, double pointY,
     const wrenium::geo::Point point{static_cast<float>(pointX), static_cast<float>(pointY)};
     const wrenium::geo::GeoPoint result = wrenium::geo::conic::unproject(point, frame, scale);
     return {static_cast<double>(result.latRad) * kRadToDeg, static_cast<double>(result.lonRad) * kRadToDeg};
+}
+
+double WreniumGeoBridge::clampConicOriginLatDeg(
+    double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx) const
+{
+    const wrenium::geo::conic::LambertConformalConicFrame frame = makeConicFrame(standardParallel1Deg, standardParallel2Deg, originLatDeg, 0.0);
+    const float latRad = static_cast<float>(originLatDeg) * static_cast<float>(1.0 / kRadToDeg);
+    const float clampedLatRad = wrenium::geo::conic::clampOriginLatForApexSafety(
+        latRad, frame, static_cast<float>(halfWidthKm), static_cast<float>(viewportWidthPx), static_cast<float>(viewportHeightPx));
+    return static_cast<double>(clampedLatRad) * kRadToDeg;
 }
 
 QString WreniumGeoBridge::computeGnomonicCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter)
