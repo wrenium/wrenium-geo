@@ -3,6 +3,8 @@
 
 #include "WreniumGeoBridge.h"
 
+#include <cmath>
+
 #include <QDebug>
 
 #include <wrenium/geo/azimuthal_pipeline.h>
@@ -33,6 +35,46 @@ void warnOnError(const char *context, wrenium::geo::Error error)
     }
 }
 
+wrenium::geo::azimuthal::ProjectionType toProjectionType(WreniumGeoBridge::AzimuthalProjection projection)
+{
+    switch (projection) {
+    case WreniumGeoBridge::AzimuthalProjection::Orthographic:
+        return wrenium::geo::azimuthal::ProjectionType::Orthographic;
+    case WreniumGeoBridge::AzimuthalProjection::Gnomonic:
+        return wrenium::geo::azimuthal::ProjectionType::Gnomonic;
+    default:
+        return wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    }
+}
+
+// wrenium::geo::makeViewport() (viewport.h) picks scale so a point at
+// exactly clipRadiusKm lands at exactly viewportRadiusPx -- true for
+// equidistant (radius is exactly linear in distance) and a safe
+// underestimate for orthographic (sin(x) <= x, so its own clip-circle
+// edge always lands *inside* viewportRadiusPx, never past it), but wrong
+// for gnomonic: its radius grows as tan(centralAngle), which overtakes x
+// increasingly fast approaching the 90 degree horizon (2.85x at 75
+// degrees, 36.9x at 89) -- reusing the same linear scale would leave most
+// of a gnomonic view's own clip circle projected far outside the visible
+// disc, wasting the rotate/clip/project work on points a circular mask
+// then throws away, and silently making clipRadiusKm mean a different
+// real-world distance than it does for the other two projections at the
+// same nominal value. Calibrated here instead so clipRadiusKm's own edge
+// always lands at exactly viewportRadiusPx, the same contract
+// makeViewport() itself already gives equidistant.
+wrenium::geo::Viewport makeAzimuthalViewport(double clipRadiusKm, double viewportRadiusPx, WreniumGeoBridge::AzimuthalProjection projection)
+{
+    if (projection != WreniumGeoBridge::AzimuthalProjection::Gnomonic) {
+        return wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+    }
+
+    const double clipRadiusRad = clipRadiusKm / static_cast<double>(wrenium::geo::kEarthRadiusKm);
+    wrenium::geo::Viewport viewport;
+    viewport.clipRadiusRad = static_cast<float>(clipRadiusRad);
+    viewport.scale = static_cast<float>(viewportRadiusPx / (static_cast<double>(wrenium::geo::kEarthRadiusKm) * std::tan(clipRadiusRad)));
+    return viewport;
+}
+
 } // namespace
 
 WreniumGeoBridge::WreniumGeoBridge(QObject *parent)
@@ -40,7 +82,7 @@ WreniumGeoBridge::WreniumGeoBridge(QObject *parent)
 {
 }
 
-QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, bool useOrthographic)
+QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, AzimuthalProjection projection)
 {
     const wrenium::geo::Error loadErr = m_input.ensureLoaded(kWreniumGeoWorldCoastline110m, kWreniumGeoWorldCoastline110mSize);
     if (loadErr != wrenium::geo::Error::Ok) {
@@ -52,9 +94,9 @@ QString WreniumGeoBridge::computeCoastlineSvgPath(double centerLatDeg, double ce
     }
 
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
-    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+    const wrenium::geo::Viewport viewport = makeAzimuthalViewport(clipRadiusKm, viewportRadiusPx, projection);
 
-    const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    const wrenium::geo::azimuthal::ProjectionType projectionType = toProjectionType(projection);
 
     wrenium::geo::Error err;
     if (!useBinaryEmitter) {
@@ -90,7 +132,7 @@ double WreniumGeoBridge::mercatorMaxLatDeg() const
     return static_cast<double>(wrenium::geo::cylindrical::kMercatorMaxLatRad) * kRadToDeg;
 }
 
-QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, bool useOrthographic)
+QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter, AzimuthalProjection projection)
 {
     const wrenium::geo::Error loadErr = m_borderInput.ensureLoaded(kWreniumGeoWorldBorders110m, kWreniumGeoWorldBorders110mSize);
     if (loadErr != wrenium::geo::Error::Ok) {
@@ -102,9 +144,9 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     }
 
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
-    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+    const wrenium::geo::Viewport viewport = makeAzimuthalViewport(clipRadiusKm, viewportRadiusPx, projection);
 
-    const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    const wrenium::geo::azimuthal::ProjectionType projectionType = toProjectionType(projection);
 
     wrenium::geo::Error err;
     if (!useBinaryEmitter) {
@@ -130,7 +172,7 @@ QString WreniumGeoBridge::computeBorderSvgPath(double centerLatDeg, double cente
     return QString::fromLatin1(m_borderSvgPath.data(), static_cast<int>(m_borderSvgPath.size()));
 }
 
-QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useOrthographic) const
+QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, AzimuthalProjection projection) const
 {
     if (clipRadiusKm <= 0.0 || viewportRadiusPx <= 0.0) {
         return {0.0, 0.0, false};
@@ -138,12 +180,13 @@ QVariantList WreniumGeoBridge::projectPoint(double lat, double lon, double cente
 
     const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(static_cast<float>(centerLatDeg), static_cast<float>(centerLonDeg));
     const wrenium::geo::GeoPoint rawPoint = wrenium::geo::makeGeoPoint(static_cast<float>(lat), static_cast<float>(lon));
-    // Same makeViewport() call computeCoastlineSvgPath/computeBorderSvgPath
-    // use, so a marker placed via this method's result lands exactly where
-    // the SVG/binary path output puts the same location.
-    const wrenium::geo::Viewport viewport = wrenium::geo::makeViewport(static_cast<float>(clipRadiusKm), static_cast<float>(viewportRadiusPx));
+    // Same makeAzimuthalViewport() call computeCoastlineSvgPath/
+    // computeBorderSvgPath use, so a marker placed via this method's
+    // result lands exactly where the SVG/binary path output puts the
+    // same location.
+    const wrenium::geo::Viewport viewport = makeAzimuthalViewport(clipRadiusKm, viewportRadiusPx, projection);
 
-    const wrenium::geo::azimuthal::ProjectionType projectionType = useOrthographic ? wrenium::geo::azimuthal::ProjectionType::Orthographic : wrenium::geo::azimuthal::ProjectionType::Equidistant;
+    const wrenium::geo::azimuthal::ProjectionType projectionType = toProjectionType(projection);
     const wrenium::geo::azimuthal::ProjectedPoint projected = wrenium::geo::azimuthal::projectPoint(rawPoint, center, viewport.clipRadiusRad, viewport.scale, projectionType);
 
     if (!projected.visible) {
