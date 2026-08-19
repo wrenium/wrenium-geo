@@ -13,6 +13,7 @@
 
 #include <wrenium/geo/binary_format.h>
 #include <wrenium/geo/buffer.h>
+#include <wrenium/geo/conic_pipeline.h>
 #include <wrenium/geo/float_format.h>
 #include <wrenium/geo/geo_point.h>
 #include <wrenium/geo/input_format.h>
@@ -189,6 +190,84 @@ public:
     // function's own comment for the dead-space bug a flat clamp causes
     // at wide zooms.
     Q_INVOKABLE double clampMercatorCenterLatDeg(double latDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx) const;
+
+    // Lambert conformal conic counterpart to computeCoastlineSvgPath -- a
+    // third, fully separate pipeline (conic::projectRings,
+    // conic_pipeline.h). Fixed by standardParallel1Deg/standardParallel2Deg/
+    // originLatDeg/originLonDeg (makeLambertConformalConicFrame,
+    // detail/conic/lambert_conformal.h -- built fresh each call, cheap
+    // since it's just a handful of log()/exp()/sincos() calls, never a
+    // hot per-point loop), fixed by two standard parallels and an origin
+    // point -- a real property of this projection itself (see
+    // conic_pipeline.h's own comment on why there's no
+    // rotate-to-a-single-point step here). halfWidthKm/viewportWidthPx/
+    // viewportHeightPx give scale/clipLatRad/clipLonRad the same way
+    // computeMercatorCoastlineSvgPath's identical parameters do. Reuses
+    // m_workspace/m_svgPath (safe: see that method's own comment on why).
+    // NOLINTBEGIN(bugprone-easily-swappable-parameters)
+    Q_INVOKABLE QString computeConicCoastlineSvgPath(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter);
+
+    // Border-line counterpart, mirroring computeConicCoastlineSvgPath /
+    // computeMercatorBorderSvgPath's own relationship. Reuses
+    // m_borderInput/m_borderWorkspace for the same reason as those.
+    Q_INVOKABLE QString computeConicBorderSvgPath(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx, bool useBinaryEmitter);
+
+    // Projects an arbitrary point (a waypoint or a great-circle route
+    // sample, for example) into computeConicCoastlineSvgPath()'s own
+    // coordinate space -- conic::project() directly, no clip-circle
+    // visibility test the way azimuthal's own projectPoint() has (Lambert
+    // conformal conic has no such concept; see conic_pipeline.h).
+    Q_INVOKABLE QVariantList projectConicPoint(double latDeg, double lonDeg, double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx) const;
+
+    // Inverse of projectConicPoint() -- conic::unproject() directly. Lets
+    // a chart click resolve to a real (lat, lon), the same way
+    // unprojectMercatorPoint() does for the Mercator family.
+    Q_INVOKABLE QVariantList unprojectConicPoint(double pointX, double pointY, double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double originLonDeg, double halfWidthKm, double viewportWidthPx) const;
+
+    // wrenium::geo::conic::clampOriginLatForApexSafety() -- keeps an
+    // interactive viewer's own origin from panning/zooming close enough
+    // to this frame's finite pole to expose the wedge's own real angular
+    // gap (that function's own comment has the geometry). Only the
+    // standard parallels matter here (the frame's own n/rhoScale don't
+    // depend on origin) -- originLatDeg/originLonDeg are present anyway
+    // for symmetry with this bridge's other conic methods, and because
+    // building the frame needs some origin value regardless of whether
+    // it's read back out. viewportWidthPx/viewportHeightPx only matter
+    // for their ratio, so pass 0 for both if the viewport size isn't
+    // known yet.
+    Q_INVOKABLE double clampConicOriginLatDeg(double standardParallel1Deg, double standardParallel2Deg, double originLatDeg, double halfWidthKm, double viewportWidthPx, double viewportHeightPx) const;
+    // NOLINTEND(bugprone-easily-swappable-parameters)
+
+    // Gnomonic counterpart to computeCoastlineSvgPath, hardcoded to
+    // ProjectionType::Gnomonic rather than taking a projection selector --
+    // a self-contained method for callers that specifically want gnomonic
+    // -- a route drawn straight there is a real great circle, for
+    // example (it curves on a conformal chart) -- rather than a
+    // general-purpose azimuthal entry point.
+    Q_INVOKABLE QString computeGnomonicCoastlineSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter);
+
+    // Border-line counterpart, mirroring computeGnomonicCoastlineSvgPath /
+    // computeBorderSvgPath's own relationship.
+    Q_INVOKABLE QString computeGnomonicBorderSvgPath(double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx, bool useBinaryEmitter);
+
+    // Projects an arbitrary point through the same gnomonic pipeline
+    // computeGnomonicCoastlineSvgPath() uses -- see projectPoint()'s
+    // identical shape/parameters.
+    Q_INVOKABLE QVariantList projectGnomonicPoint(double lat, double lon, double centerLatDeg, double centerLonDeg, double clipRadiusKm, double viewportRadiusPx) const;
+
+    // The point a fraction @p t of the way along the great circle from
+    // (fromLatDeg, fromLonDeg) to (toLatDeg, toLonDeg) --
+    // wrenium::geo::interpolate() (spherical.h). Sampling this at several
+    // t values and projecting each through any of this bridge's pipelines
+    // draws the actual great-circle route as a polyline -- the straight
+    // line between the two projected endpoints only matches that route
+    // under gnomonic. Returns a 2-element list [latDeg, lonDeg].
+    Q_INVOKABLE QVariantList interpolateGreatCircle(double fromLatDeg, double fromLonDeg, double toLatDeg, double toLonDeg, double t) const;
+
+    // Initial compass bearing (0 = north, clockwise) from one point to
+    // another along the great circle between them --
+    // wrenium::geo::bearingRad (spherical.h), in degrees.
+    Q_INVOKABLE double bearingDeg(double fromLatDeg, double fromLonDeg, double toLatDeg, double toLonDeg) const;
 
 private:
     // kWreniumGeoWorldCoastline110mInfo.pointCount/ringCount (generated by

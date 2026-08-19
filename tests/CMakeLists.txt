@@ -10,12 +10,14 @@ add_executable(tests
     test_spherical.cpp
     test_orthographic.cpp
     test_gnomonic.cpp
+    test_lambert_conformal.cpp
     test_mercator.cpp
     test_clip.cpp
     test_contains.cpp
     test_pipeline.cpp
     test_azimuthal_svg.cpp
     test_cylindrical_svg.cpp
+    test_conic_svg.cpp
     test_input_format.cpp
     test_binary_emitter.cpp
     test_binary_format.cpp

@@ -4,7 +4,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 project(wrenium-geo
-    VERSION 0.10.0
+    VERSION 0.11.0
     DESCRIPTION "Header-only geometry library projecting geographic coastline and border data from an arbitrary center point"
     LANGUAGES CXX
 )
@@ -23,7 +23,7 @@ include(FetchContent)
 FetchContent_Declare(
     wrenium-f32math
     GIT_REPOSITORY https://github.com/wrenium/wrenium-f32math.git
-    GIT_TAG v0.4.0
+    GIT_TAG v0.5.0
     GIT_SHALLOW TRUE
 )
 FetchContent_MakeAvailable(wrenium-f32math)
@@ -70,8 +70,9 @@ if(PROJECT_IS_TOP_LEVEL)
 
         add_subdirectory(examples/azimuthmap)
         add_subdirectory(examples/mercatormap)
+        add_subdirectory(examples/lccmap)
         add_custom_target(examples)
-        add_dependencies(examples azimuthmap mercatormap)
+        add_dependencies(examples azimuthmap mercatormap lccmap)
 
         add_subdirectory(demos/rotator)
         add_subdirectory(demos/radar)

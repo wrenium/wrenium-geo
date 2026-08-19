@@ -6,11 +6,11 @@
 [API documentation](https://wrenium.github.io/wrenium-geo/)
 
 A C++17 header-only geometry library that projects geographic coastline and
-border data onto a 2D plane. Four projections are supported: azimuthal
-equidistant, azimuthal orthographic, azimuthal gnomonic, and whole-world Web
-Mercator. Output is either an SVG path string or a compact binary path
-stream. Built for constrained environments: zero heap allocation, and no
-exceptions or RTTI anywhere in the library.
+border data onto a 2D plane. Five projections are supported: azimuthal
+equidistant, azimuthal orthographic, azimuthal gnomonic, Lambert conformal
+conic, and whole-world Web Mercator. Output is either an SVG path string or
+a compact binary path stream. Built for constrained environments: zero heap
+allocation, and no exceptions or RTTI anywhere in the library.
 
 ![Example output from examples/azimuthmap](docs/azimuthmap-screenshot.png)
 
@@ -31,6 +31,17 @@ exceptions or RTTI anywhere in the library.
   shortest path between the two points it joins; radius grows without
   bound approaching a 90 degree clip radius, so only meaningful strictly
   inside it).
+- **Lambert conformal conic** (`wrenium::geo::conic::projectRings`/
+  `projectLines`, `conic_pipeline.h`): the standard regional/continental
+  reference-map projection -- shapes stay locally undistorted (conformal)
+  across the whole map, though great circles aren't rendered as straight
+  lines. Fixed by two standard parallels plus an origin point
+  (`makeLambertConformalConicFrame`, `detail/conic/lambert_conformal.h`)
+  -- no rotate step, and no antimeridian-crossing support (a real domain
+  restriction:
+  input geometry is expected to already sit within a bounded region around
+  the central meridian, the way any real LCC basemap does -- see
+  conic_pipeline.h's own comment).
 - **Whole-world Web Mercator** (`wrenium::geo::cylindrical::projectRings`/
   `projectLines`, `cylindrical_pipeline.h`): no exact per-point clip, just
   an optional coarse visibility cull, with pole-latitude clamping and
@@ -91,9 +102,9 @@ exceptions or RTTI anywhere in the library.
 
 ## Projections
 
-| Azimuthal equidistant | Azimuthal orthographic | Azimuthal gnomonic | Web Mercator |
-| --- | --- | --- | --- |
-| ![Azimuthal equidistant sample](docs/equidistant-sample.png) | ![Azimuthal orthographic sample](docs/orthographic-sample.png) | ![Azimuthal gnomonic sample](docs/gnomonic-sample.png) | ![Web Mercator sample](docs/mercator-sample.png) |
+| Azimuthal equidistant | Azimuthal orthographic | Azimuthal gnomonic | Lambert conformal conic | Web Mercator |
+| --- | --- | --- | --- | --- |
+| ![Azimuthal equidistant sample](docs/equidistant-sample.png) | ![Azimuthal orthographic sample](docs/orthographic-sample.png) | ![Azimuthal gnomonic sample](docs/gnomonic-sample.png) | ![Lambert conformal conic sample](docs/lambertconformalconic-sample.png) | ![Web Mercator sample](docs/mercator-sample.png) |
 
 **Azimuthal equidistant** centers the map on any point and preserves true
 distance and bearing from that center exactly -- a straight line from the
@@ -113,6 +124,15 @@ drawn on the output is the shortest path between the two points it joins,
 which the equidistant/orthographic pair don't guarantee off-center. Radius
 grows without bound approaching a 90 degree clip radius, so it's only
 meaningful strictly inside it, tighter than orthographic's own limit.
+
+**Lambert conformal conic** isn't centered on a single point -- it's fixed
+by two standard parallels and an origin, the standard shape for a regional
+or continental reference map (aeronautical charts, national atlases).
+Shapes stay locally undistorted across the whole map rather than only at
+one center point, though straight lines are no longer great circles the
+way gnomonic's are. No antimeridian-crossing support -- a real, complete
+domain restriction matching how these maps are actually used (see
+conic_pipeline.h's own comment).
 
 **Web Mercator** is the familiar rectangular world map used by most web
 mapping services -- straight lines of constant compass bearing are
@@ -184,23 +204,20 @@ tests/                       doctest suite
 tools/wrenium_geo_convert/    offline TopoJSON -> input-geometry converter
                              tool (builds as `topojson2bin`)
 common/wrenium_geo_qt_bridge/ shared C++/QML bridge (WreniumGeoBridge) --
-                             used by the Qt Quick apps below, and itself
+                             used by every Qt Quick app below, and itself
                              the reference example for wrapping the
                              library as a QML type
-examples/azimuthmap/         minimal Qt Quick integration example (pan/zoom,
-                             CLI screenshot mode) showing how to drive
-                             WreniumGeoBridge's azimuthal methods from an app
-examples/mercatormap/        same, for WreniumGeoBridge's Web Mercator
-                             methods (drag-to-pan, scroll-to-zoom-toward-
-                             cursor, CLI screenshot mode)
-demos/rotator/               antenna-rotator-controller-style showcase demo
-demos/radar/                 PPI radar scope showcase demo
+examples/                    minimal Qt Quick integration examples, one
+                             per projection family (pan/zoom, CLI
+                             screenshot mode), showing how to drive
+                             WreniumGeoBridge from an app
+demos/                       full Qt Quick showcase applications built on
+                             the same bridge
 ```
 
-`examples/` and `demos/` are kept distinct on purpose: `examples/azimuthmap`
-and `examples/mercatormap` are minimal references for people *integrating*
-wrenium-geo into their own app, while `demos/rotator` and `demos/radar` are
-full showcase applications for people *evaluating* it.
+`examples/` and `demos/` are kept distinct on purpose: `examples/*` are
+minimal references for people *integrating* wrenium-geo into their own app,
+while `demos/*` are full showcase applications for people *evaluating* it.
 
 ## TopoJSON converter
 
@@ -362,6 +379,35 @@ const wrenium::geo::GeoPoint center = wrenium::geo::makeGeoPoint(0.0f, 0.0f); //
 const float scale = 0.03f; // output units per km
 
 wrenium::geo::cylindrical::projectRings(coastline, coastlineInput, center, scale);
+wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
+                           coastline.projectedRingSizes().size(), svgPath);
+```
+
+### Lambert conformal conic
+
+via `conic::projectRings`/`projectLines` (`conic_pipeline.h`). Fixed by a
+`LambertConformalConicFrame` (`makeLambertConformalConicFrame`,
+`detail/conic/lambert_conformal.h`) built from two standard parallels and
+an origin point -- same coarse `clipLatRad`/`clipLonRad` visibility cull
+as Mercator's own, but no antimeridian-
+crossing support (input geometry is expected to already sit within a
+bounded region around the central meridian, the way any real LCC basemap
+does -- see `conic_pipeline.h`'s own comment). Also invertible via
+`conic::unproject()`:
+
+```cpp
+#include <wrenium/geo/conic_pipeline.h>
+
+const wrenium::geo::conic::LambertConformalConic params{
+    44.0f * wrenium::geo::kPi / 180.0f, // first standard parallel
+    49.0f * wrenium::geo::kPi / 180.0f, // second standard parallel
+    46.5f * wrenium::geo::kPi / 180.0f, // origin latitude -- maps to y == 0
+    3.0f * wrenium::geo::kPi / 180.0f,  // central meridian -- maps to x == 0
+};
+const wrenium::geo::conic::LambertConformalConicFrame frame = wrenium::geo::conic::makeLambertConformalConicFrame(params);
+const float scale = 0.03f; // output units per km
+
+wrenium::geo::conic::projectRings(coastline, coastlineInput, frame, scale);
 wrenium::geo::emitSvgPath(coastline.projectedPoints(), coastline.projectedRingSizes().data(),
                            coastline.projectedRingSizes().size(), svgPath);
 ```
